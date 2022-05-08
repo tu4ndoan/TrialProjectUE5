@@ -1,0 +1,1 @@
+"C:\Program Files\Epic Games\UE_5.0\Engine\Binaries\Win64\UnrealEditor.exe" "C:\Users\RAZER\Documents\TheRealTrialProjectUE5\TrialProject.uproject" -Game -log -Windowed -noborder -ResX=1600 -ResY=900
