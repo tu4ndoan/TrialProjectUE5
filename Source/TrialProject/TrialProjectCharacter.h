@@ -34,7 +34,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animations)
 	UAnimMontage* M_AttackPrimaryB;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Attacks)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animations)
+	UAnimMontage* M_Dead;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animations)
+	UAnimMontage* M_ReactToHit;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sounds)
+	USoundBase* S_AttackB;
+
+	FTimerHandle AttackHandle;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Attacks, Replicated)
 	bool bIsAttacking;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AttackPrimaryA, Category = Attacks)
@@ -49,8 +60,12 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentHealth)
 	float CurrentHealth;
 
-protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = PlayerState)
+	int32 TeamId;
 
+	bool bOverlapped = false;
+
+protected:
 	/** Called for forwards/backward input */
 	void MoveForward(float Value);
 
@@ -88,6 +103,9 @@ protected:
 	UFUNCTION()
 	void OnRep_CurrentHealth();
 
+	UFUNCTION(BlueprintCallable, Category = Attack)
+	void SetAttacking(bool IsAttacking);
+
 	// Attack A
 	UFUNCTION(BlueprintCallable, Category = Attack)
 	void StartAttackPrimaryA();
@@ -95,7 +113,7 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void AttackPrimaryA();
 
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION()
 	void OnRep_AttackPrimaryA();
 
 	// Attack B
@@ -108,6 +126,21 @@ protected:
 	UFUNCTION()
 	void OnRep_AttackPrimaryB();
 
+	UFUNCTION(BlueprintCallable, Category = Attack)
+	void StopAttacking();
+
+	//void OnPlayerHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& Hit);
+	UFUNCTION()
+	void OnPlayerOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& Hit);
+
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
+	UFUNCTION(BlueprintCallable, Category = Attack)
+	void ActivateSword(); // start attaking, set collision of sword to OverlapAll
+
+	UFUNCTION(BlueprintCallable, Category = Attack)
+	void DeactivateSword(); // set collision to NoCollision
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -118,5 +151,8 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Weapon)
+	class UBoxComponent* Sword;
 };
 

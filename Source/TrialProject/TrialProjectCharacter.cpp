@@ -3,10 +3,14 @@
 #include "TrialProjectCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "TPTeamFightGameMode.h"
+#include "TPPlayerController.h"
+#include "Kismet/GameplayStatics.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATrialProjectCharacter
@@ -50,12 +54,24 @@ ATrialProjectCharacter::ATrialProjectCharacter()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 
+	this->bGenerateOverlapEventsDuringLevelStreaming = true;
+
 	MaxHealth = 100.f;
 	CurrentHealth = MaxHealth;
 
 	bIsAttacking = false;
 	bAttackPrimaryA = false;
 	bAttackPrimaryB = false;
+
+	//GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ATrialProjectCharacter::OnPlayerOverlap);
+	Sword = CreateDefaultSubobject<UBoxComponent>(TEXT("Sword"));
+	FName FNWeaponSocket = TEXT("sword_bottom");
+	USkeletalMeshComponent* mesh = Cast<USkeletalMeshComponent>(GetMesh());
+	//const USkeletalMeshSocket* socket = mesh->GetSocketByName("sword_bottom");
+	Sword->SetupAttachment(Cast<USceneComponent>(mesh));
+	Sword->SetupAttachment(GetMesh(), TEXT("sword_bottom"));
+	Sword->OnComponentBeginOverlap.AddDynamic(this, &ATrialProjectCharacter::OnPlayerOverlap);
+	Sword->bReplicatePhysicsToAutonomousProxy = true;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -92,7 +108,8 @@ void ATrialProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ATrialProjectCharacter, CurrentHealth);	
+	DOREPLIFETIME(ATrialProjectCharacter, CurrentHealth);
+	DOREPLIFETIME(ATrialProjectCharacter, bIsAttacking);
 	DOREPLIFETIME(ATrialProjectCharacter, bAttackPrimaryA);
 	DOREPLIFETIME(ATrialProjectCharacter, bAttackPrimaryB);
 }
@@ -150,17 +167,44 @@ void ATrialProjectCharacter::MoveRight(float Value)
 
 void ATrialProjectCharacter::SetCurrentHealth(float Value)
 {
-	if (GetLocalRole())
-	CurrentHealth = FMath::Clamp(Value, 0.f, MaxHealth);
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		CurrentHealth = FMath::Clamp(Value, 0.f, MaxHealth);
+		OnRep_CurrentHealth(); // if dedicated server, dont call this line
+	}
 }
 
 void ATrialProjectCharacter::OnRep_CurrentHealth()
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, TEXT("health changed"));
+	PlayAnimMontage(M_ReactToHit, 1.f, NAME_None);
+	if (CurrentHealth <= 0)
+	{
+		ATPPlayerController* PC = Cast<ATPPlayerController>(Controller);
+		if (PC)
+		{
+			PC->OnKilled();
+			PlayAnimMontage(M_Dead, 1.f, NAME_None);
+		}
+		Destroy();
+	}
 }
 
+
+void ATrialProjectCharacter::SetAttacking(bool IsAttacking)
+{
+	if (HasAuthority())
+	{
+		bIsAttacking = IsAttacking;
+	}
+}
+
+
 // Attack A, using RepNotify on bAttackPrimaryA
+void ATrialProjectCharacter::StopAttacking()
+{
+	SetAttacking(false);
+}
+
 void ATrialProjectCharacter::StartAttackPrimaryA()
 {
 	AttackPrimaryA();
@@ -171,8 +215,18 @@ void ATrialProjectCharacter::AttackPrimaryA_Implementation()
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		bAttackPrimaryA = !bAttackPrimaryA;
-		OnRep_AttackPrimaryA();
+		SetAttacking(true);
+		OnRep_AttackPrimaryA(); // if dedicated server, dont call this line
 	}
+}
+
+void ATrialProjectCharacter::OnRep_AttackPrimaryA()
+{
+	float AnimDuration = PlayAnimMontage(M_AttackPrimaryA, 1.f, NAME_None);
+	if (S_AttackB != NULL)
+		UGameplayStatics::PlaySoundAtLocation(this, S_AttackB, GetActorLocation());
+
+	GetWorld()->GetTimerManager().SetTimer(AttackHandle, this, &ATrialProjectCharacter::StopAttacking, AnimDuration, false);
 }
 
 // Attack B
@@ -194,5 +248,56 @@ void ATrialProjectCharacter::OnRep_AttackPrimaryB()
 {
 	// play visual and sound effects of the attack
 	// TODO make it dynamic so we can pass in any other attack to use without creating more functions
-	PlayAnimMontage(M_AttackPrimaryB, 1.f, NAME_None);
+	bIsAttacking = true;
+	float AnimDuration = PlayAnimMontage(M_AttackPrimaryB, 1.f, NAME_None);
+
+	if (S_AttackB != NULL)
+		UGameplayStatics::PlaySoundAtLocation(this, S_AttackB, GetActorLocation());
+
+	GetWorld()->GetTimerManager().SetTimer(AttackHandle, this,  &ATrialProjectCharacter::StopAttacking, AnimDuration, false);
+}
+
+void ATrialProjectCharacter::OnPlayerOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& Hit)
+{
+	// if you hit someone, tell server to apply damage and record the hit
+	//UGameplayStatics::ApplyPointDamage(OtherActor, 10.f, FVector::Zero(), Hit, GetInstigator()->Controller, this, UDamageType::StaticClass());
+		if (const UBoxComponent* MyBox = Cast<UBoxComponent>(OverlappedComponent))
+		{
+			if (OtherActor != NULL && OtherActor != this && MyBox->GetName() == "Sword")
+			{
+				if (GetLocalRole() == ROLE_Authority)
+				{
+					if (ATPTeamFightGameMode* GM = GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>())
+					{
+						GM->PlayerHit();
+						UE_LOG(LogTemp, Warning, TEXT("has GM"));
+					}
+					
+				}
+				
+				UGameplayStatics::ApplyDamage(OtherActor, 10.f, GetInstigator()->Controller, this, UDamageType::StaticClass());
+				//UGameplayStatics::ApplyPointDamage(OtherActor, 10.f, FVector::Zero(), Hit, GetInstigator()->Controller, this, UDamageType::StaticClass());
+				UE_LOG(LogTemp, Warning, TEXT("apply damage"));
+			}
+		}
+}
+
+float ATrialProjectCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+	float damageApplied = CurrentHealth - DamageAmount;
+	SetCurrentHealth(damageApplied);
+	UE_LOG(LogTemp, Warning, TEXT("take damage %d"), DamageAmount);
+	return damageApplied;
+}
+
+void ATrialProjectCharacter::ActivateSword()
+{
+	Sword->SetCollisionProfileName(TEXT("OverlapAll"));
+	UE_LOG(LogTemp, Warning, TEXT("enable collision"));
+}
+
+void ATrialProjectCharacter::DeactivateSword()
+{
+	Sword->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	UE_LOG(LogTemp, Warning, TEXT("disable collision"));
 }
