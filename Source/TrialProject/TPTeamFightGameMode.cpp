@@ -7,26 +7,20 @@
 #include "TPPlayerController.h"
 #include "GameFramework/Actor.h"
 #include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
 #include "TPPlayerStart.h"
 
 
 ATPTeamFightGameMode::ATPTeamFightGameMode()
 {
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));										
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
+	
 	DefaultPawnClass = PlayerPawnClassFinder.Class;
-
-	// custom HUD
-	// custom PlayerController
 	PlayerControllerClass = ATPPlayerController::StaticClass();
 	PlayerStateClass = ATPPlayerState::StaticClass();
 	GameStateClass = ATPTeamFightGameState::StaticClass();
 }
 
-// welcome/register player
-
-// preinit/postinit
-
-// set team for new player
 void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
@@ -53,7 +47,7 @@ void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
 					}
 				}
 			}
-			if (NumTeamA >= NumTeamB)
+			if (NumTeamA > NumTeamB)
 			{
 				PS->bTeamB = true;
 			}

@@ -24,4 +24,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated)
 	bool bTeamB;
 
+	UFUNCTION()
+	bool IsTeamB() const { return bTeamB; }
 };
