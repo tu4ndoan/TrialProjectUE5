@@ -18,17 +18,24 @@ public:
 	ATPTeamFightGameState();
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	int TeamAScore;
+protected:
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	int TeamBScore;
+	UPROPERTY(BlueprintReadOnly, Replicated)
+	float TeamAScore;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_TotalHits)
-	int TotalHits;
+	UPROPERTY(BlueprintReadOnly, Replicated)
+	float TeamBScore;
 
-	UFUNCTION()
-	void OnRep_TotalHits();
+public:
 
-	void PlayerHit();
+	UFUNCTION(BlueprintCallable, Category = "TrialProject | Team")
+	FORCEINLINE float GetTeamAScore() const { return TeamAScore; }
+
+	UFUNCTION(BlueprintCallable, Category = "TrialProject | Team")
+	FORCEINLINE float GetTeamBScore() const { return TeamBScore; }
+
+	void SetTeamAScore(float Value);
+
+	void SetTeamBScore(float Value);
+
 };

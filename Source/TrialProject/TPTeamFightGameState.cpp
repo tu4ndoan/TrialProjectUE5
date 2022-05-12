@@ -2,33 +2,35 @@
 
 
 #include "TPTeamFightGameState.h"
+#include "TPPlayerState.h"
 #include "Net/UnrealNetwork.h"
 
 ATPTeamFightGameState::ATPTeamFightGameState()
 {
 	TeamAScore = 0;
-	TeamBScore = 10;
-	TotalHits = 0;
+	TeamBScore = 0;
 }
 
 void ATPTeamFightGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ATPTeamFightGameState, TotalHits);
+	DOREPLIFETIME(ATPTeamFightGameState, TeamAScore);
+	DOREPLIFETIME(ATPTeamFightGameState, TeamBScore);
 }
 
-void ATPTeamFightGameState::PlayerHit()
+void ATPTeamFightGameState::SetTeamAScore(float Value)
 {
 	if (HasAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("player hit game state"));
-		++TotalHits;
-		UE_LOG(LogTemp, Warning, TEXT("Server: total hits %d"), TotalHits);
+		TeamAScore = Value;
 	}
 }
 
-void ATPTeamFightGameState::OnRep_TotalHits()
+void ATPTeamFightGameState::SetTeamBScore(float Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Client: total hits %d"), TotalHits);
+	if (HasAuthority())
+	{
+		TeamBScore = Value;
+	}
 }

@@ -24,5 +24,8 @@ public:
 
 	bool ShouldSpawnAtStartSpot(AController* Player) override { return false; };
 
-	void PlayerHit();
+	void PlayerHit(AController* Player, AActor* PlayerBeingHit);
+
+	float MatchTime;
+	FTimerHandle MatchTimer;
 };

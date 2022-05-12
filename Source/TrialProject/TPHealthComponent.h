@@ -35,4 +35,5 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void TakeDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+
 };

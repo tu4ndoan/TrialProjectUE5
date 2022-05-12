@@ -4,6 +4,7 @@
 #include "TPTeamFightGameMode.h"
 #include "TPPlayerState.h"
 #include "TPTeamFightGameState.h"
+#include "TrialProjectCharacter.h"
 #include "TPPlayerController.h"
 #include "GameFramework/Actor.h"
 #include "EngineUtils.h"
@@ -19,6 +20,7 @@ ATPTeamFightGameMode::ATPTeamFightGameMode()
 	PlayerControllerClass = ATPPlayerController::StaticClass();
 	PlayerStateClass = ATPPlayerState::StaticClass();
 	GameStateClass = ATPTeamFightGameState::StaticClass();
+	MatchTime = 60.f;
 }
 
 void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
@@ -37,7 +39,7 @@ void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
 				ATPPlayerState* TPPS = Cast<ATPPlayerState>(It);
 				if (TPPS)
 				{
-					if (TPPS->bTeamB)
+					if (TPPS->IsTeamB())
 					{
 						NumTeamB++;
 					}
@@ -47,13 +49,15 @@ void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
 					}
 				}
 			}
-			if (NumTeamA > NumTeamB)
+			/** If members of team A is more than members of team B */ 
+			if (NumTeamA > NumTeamB) 
 			{
-				PS->bTeamB = true;
+				PS->SetTeamB(true);
 			}
 			else {
-				PS->bTeamB = false;
+				PS->SetTeamB(false);
 			}
+			/** End of If*/
 		}
 	}
 }
@@ -68,7 +72,7 @@ AActor* ATPTeamFightGameMode::ChoosePlayerStart(AController* Player)
 			TArray<ATPPlayerStart*> Starts;
 			for (TActorIterator<ATPPlayerStart> StartItr(GetWorld()); StartItr; ++StartItr)
 			{
-				if (StartItr->bTeamB == PS->bTeamB)
+				if (StartItr->bTeamB == PS->IsTeamB())
 				{
 					Starts.Add(*StartItr);
 				}
@@ -79,11 +83,40 @@ AActor* ATPTeamFightGameMode::ChoosePlayerStart(AController* Player)
 	return NULL;
 }
 
-void ATPTeamFightGameMode::PlayerHit()
+void ATPTeamFightGameMode::PlayerHit(AController* Player, AActor* PlayerBeingHit)
 {
+	
 	if (ATPTeamFightGameState* GS = GetGameState<ATPTeamFightGameState>())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Player hit game mode"));
-		GS->PlayerHit();
+		if (ATPPlayerState* PS = Cast<ATPPlayerState>(Player->PlayerState))
+		{
+			PS->SetTotalHit(PS->GetTotalHit() + 1);
+			ATrialProjectCharacter* HitPlayer = Cast<ATrialProjectCharacter>(PlayerBeingHit);
+			if (HitPlayer->GetPlayerState<ATPPlayerState>()->IsDead())
+			{
+				if (Cast<ATrialProjectCharacter>(PlayerBeingHit)->Instigators.Last() == Player) {
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("%s killed %s, +1 point for gryffindor"), *PS->GetPlayerNameCustom(), *HitPlayer->GetPlayerState<ATPPlayerState>()->GetPlayerNameCustom()));
+					/** Set Score for Player who got the last hit, and set Score for the Team the Player was in */
+					PS->SetScore(PS->GetScore() + 1.0f);
+					if (PS->IsTeamB())
+					{
+						GS->SetTeamBScore(GS->GetTeamBScore() + 1.0f);
+					}
+					else
+					{
+						GS->SetTeamAScore(GS->GetTeamAScore() + 1.0f);
+					}
+				}
+				
+			}
+		}
 	}
+}
+
+void ATPTeamFightGameMode::StartPlay()
+{
+	Super::StartPlay();
+
+	UWorld* World = GetWorld();
+	World->GetTimerManager().SetTimer(MatchTimer, this, &ATPTeamFightGameMode::EndPlay, MatchTime, false);
 }

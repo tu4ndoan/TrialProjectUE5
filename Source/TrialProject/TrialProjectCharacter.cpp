@@ -200,7 +200,7 @@ void ATrialProjectCharacter::AttackPrimaryA_Implementation()
 	
 	if (IsLocallyControlled())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("locally controlled"));
+		//UE_LOG(LogTemp, Warning, TEXT("locally controlled"));
 	}
 	if (GetLocalRole() == ROLE_Authority)
 	{
@@ -244,12 +244,11 @@ void ATrialProjectCharacter::OnRep_AttackPrimaryB()
 	GetWorld()->GetTimerManager().SetTimer(AttackHandle, this, &ATrialProjectCharacter::StopAttacking, AnimDuration, false);
 }
 
+
+/** Sphere Trace */
 void ATrialProjectCharacter::SphereTrace_Implementation()
 {
 	TArray<AActor*> ActorsToIgnore;
-	TArray <AActor*> ChildActors;
-	GetAllChildActors(ChildActors, true);
-	ActorsToIgnore += ChildActors;
 	ActorsToIgnore.Add(this);
 	TArray<FHitResult> HitArray;
 	FVector EndLocation = GetActorLocation() + (RootComponent->GetForwardVector() * 120.f);
@@ -258,36 +257,38 @@ void ATrialProjectCharacter::SphereTrace_Implementation()
 	{
 		for (const FHitResult HitResult : HitArray)
 		{
-			// how to know if we hit a teammate or enemy?
 			if (HitResult.GetActor() != this)
 			{
 				if (ATrialProjectCharacter* HitActor = Cast<ATrialProjectCharacter>(HitResult.GetActor()))
 				{
-					if (HitActor->GetPlayerState<ATPPlayerState>()->IsTeamB() != GetPlayerState<ATPPlayerState>()->IsTeamB()) {
-						GEngine->AddOnScreenDebugMessage(-1, 60.0f, FColor::Green, FString::Printf(TEXT("Hit enemy")));
-						//float TakeDamage = HitActor->TakeDamage(10.f, FDamageEvent(UDamageType::StaticClass()), GetInstigator()->GetController(), this);
-						if (HasAuthority())
+					ATPPlayerState* HitActorState = HitActor->GetPlayerState<ATPPlayerState>();
+					/** If HitActorState valid and HitActor is not dead and HitActor is not teammate*/
+					if (HitActorState->IsTeamB() != GetPlayerState<ATPPlayerState>()->IsTeamB())
+					{
+						if (HitActorState->IsDead() == false)
 						{
-							ATPTeamFightGameMode* GM = GetWorld() != NULL ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL;
-							if (GM)
+							if (HasAuthority())
 							{
-								GM->PlayerHit();
+								UGameplayStatics::ApplyDamage(HitActor, Damage, GetInstigator()->GetController(), this, DamageType);
+								ATPTeamFightGameMode* GM = GetWorld() != NULL ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL;
+								if (GM)
+								{
+									GM->PlayerHit(Controller, HitActor);
+								}
 							}
-						}
-						UGameplayStatics::ApplyDamage(HitActor, 14.0f, GetInstigator()->GetController(), this, DamageType);
+						}							
 					}
 					else
 					{
-						GEngine->AddOnScreenDebugMessage(-1, 60.0f, FColor::Green, FString::Printf(TEXT("Hit friendly")));
+						//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, FString::Printf(TEXT("Hit friendly")));
 					}
-				}
-
-				//UGameplayStatics::ApplyDamage(HitResult.GetActor(), Damage, GetInstigator()->GetController(), this, DamageType);		
-				GEngine->AddOnScreenDebugMessage(-1, 60.0f, FColor::Green, FString::Printf(TEXT("Hit other: %s"), *HitResult.GetActor()->GetName()));
+				}		
+				//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, FString::Printf(TEXT("Hit other: %s"), *HitResult.GetActor()->GetName()));
 			}
 		}
 	}
 }
+/** End of Sphere Trace */
 
 void ATrialProjectCharacter::StartFire()
 {
@@ -319,41 +320,33 @@ void ATrialProjectCharacter::HandleFire_Implementation()
 
 void ATrialProjectCharacter::OnHealthUpdate()
 {
-	//Client-specific functionality
 	if (IsLocallyControlled())
 	{
-		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, healthMessage);
-		if (CurrentHealth <= 0)
-		{
-			FString deathMessage = FString::Printf(TEXT("You have been killed."));
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
-			ATPPlayerController* PC = GetController() != NULL ? Cast<ATPPlayerController>(GetController()) : NULL;
-			if (PC != NULL)
-				PC->OnKilled();
-		}
+
 	}
 
-	//Server-specific functionality
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, healthMessage);
-	}
-
-	//Functions that occur on all machines. 
-	/*
-		Any special functionality that should occur as a result of damage or death should be placed here.
-	*/
-	if (CurrentHealth <= 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("current health = 0, ded"));
-		PlayAnimMontage(M_Dead);
-		ATPPlayerController* PC = GetController() == NULL ? Cast<ATPPlayerController>(Controller) : NULL;
-		if (PC != NULL)
+		//FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, healthMessage);
+		if (CurrentHealth <= 0)
 		{
-			PC->OnKilled();
+			GetPlayerState<ATPPlayerState>()->SetIsDead(true);
+			
 		}
+	}
+	if (GetPlayerState<ATPPlayerState>()->IsDead())
+	{
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("dead"));
+	}
+	else {
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("alive"));
+	}
+	ATPPlayerController* PC = GetController() == NULL ? Cast<ATPPlayerController>(Controller) : NULL;
+	if (PC != NULL)
+	{
+		PC->OnKilled();
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("dead auth"));
 	}
 }
 
@@ -375,10 +368,32 @@ float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent 
 {
 	float damageApplied = CurrentHealth - DamageTaken;
 	SetCurrentHealth(damageApplied);
-	float AnimDuration = PlayAnimMontage(M_ReactToHit);
-	GetWorld()->GetTimerManager().SetTimer(AttackHandle, this, &ATrialProjectCharacter::StopAttacking, AnimDuration, false);
-	
-	UE_LOG(LogTemp, Warning, TEXT("Took %f damage, current health %f/100"), DamageTaken, GetCurrentHealth());
+	if (damageApplied == 0)
+	{
+		PlayerDie();
+	}
+	if (GEngine)
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("%s took %f damage, current health %f/100"), *GetPlayerState<ATPPlayerState>()->GetPlayerNameCustom(), DamageTaken, GetCurrentHealth()));
+	if (IsLocallyControlled())
+	{
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("%s took %f damage, current health %f/100"), *GetPlayerState<ATPPlayerState>()->GetPlayerNameCustom(), DamageTaken, GetCurrentHealth()));
+	}
+	/** Record this damage causer to retrieve the last hitter */ 
+	Instigators.Add(EventInstigator);
 
 	return damageApplied;
+}
+
+void ATrialProjectCharacter::PlayerDie_Implementation()
+{
+	//PlayAnimMontage(M_Dead);
+	GetMovementComponent()->Deactivate();
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
+	GetMesh()->SetSimulatePhysics(true);
+	if (ATPPlayerController* PC = Cast<ATPPlayerController>(Controller))
+	{
+		//PC->OnKilled();
+	}
 }

@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "TPPlayerController.h"
+#include "TPPlayerState.h"
 #include "TPTeamFightGameMode.h"
 #include "TrialProject.h"
 
@@ -14,10 +15,5 @@ void ATPPlayerController::OnKilled()
 
 void ATPPlayerController::Respawn()
 {
-	ATPTeamFightGameMode* GM = GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>();
-	if (GM)
-	{
-		APawn* NewPawn = GM->SpawnDefaultPawnFor(this, GM->ChoosePlayerStart(this));
-		Possess(NewPawn);
-	}
+	GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>()->RestartPlayer(this);
 }
