@@ -244,7 +244,7 @@ void ATrialProjectCharacter::OnRep_AttackPrimaryB()
 	GetWorld()->GetTimerManager().SetTimer(AttackHandle, this, &ATrialProjectCharacter::StopAttacking, AnimDuration, false);
 }
 
-void ATrialProjectCharacter::SphereTrace()
+void ATrialProjectCharacter::SphereTrace_Implementation()
 {
 	TArray<AActor*> ActorsToIgnore;
 	TArray <AActor*> ChildActors;
@@ -263,10 +263,18 @@ void ATrialProjectCharacter::SphereTrace()
 			{
 				if (ATrialProjectCharacter* HitActor = Cast<ATrialProjectCharacter>(HitResult.GetActor()))
 				{
-					GEngine->AddOnScreenDebugMessage(-1, 60.0f, FColor::Green, FString::Printf(TEXT("Hit trialprojectcharacter")));
 					if (HitActor->GetPlayerState<ATPPlayerState>()->IsTeamB() != GetPlayerState<ATPPlayerState>()->IsTeamB()) {
 						GEngine->AddOnScreenDebugMessage(-1, 60.0f, FColor::Green, FString::Printf(TEXT("Hit enemy")));
-						float TakeDamage = HitActor->TakeDamage(10.f, FDamageEvent(UDamageType::StaticClass()), GetInstigator()->GetController(), this);
+						//float TakeDamage = HitActor->TakeDamage(10.f, FDamageEvent(UDamageType::StaticClass()), GetInstigator()->GetController(), this);
+						if (HasAuthority())
+						{
+							ATPTeamFightGameMode* GM = GetWorld() != NULL ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL;
+							if (GM)
+							{
+								GM->PlayerHit();
+							}
+						}
+						UGameplayStatics::ApplyDamage(HitActor, 14.0f, GetInstigator()->GetController(), this, DamageType);
 					}
 					else
 					{
@@ -315,7 +323,7 @@ void ATrialProjectCharacter::OnHealthUpdate()
 	if (IsLocallyControlled())
 	{
 		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, healthMessage);
 		if (CurrentHealth <= 0)
 		{
 			FString deathMessage = FString::Printf(TEXT("You have been killed."));
@@ -330,7 +338,7 @@ void ATrialProjectCharacter::OnHealthUpdate()
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, healthMessage);
 	}
 
 	//Functions that occur on all machines. 

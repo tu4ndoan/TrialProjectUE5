@@ -127,7 +127,7 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = Attack)
 	void StopAttacking();
 
-	UFUNCTION(BlueprintCallable, Category = Attack)
+	UFUNCTION(Server, Reliable)
 	void SphereTrace(); // Sphere Trace to notify about the hit
 
 protected:
