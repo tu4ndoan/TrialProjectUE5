@@ -34,6 +34,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 	float TotalHit;
 
+	UPROPERTY(BlueprintReadOnly, Replicated)
+	float TotalDamageDone;
+
 public:
 
 	/** Interface */
@@ -57,6 +60,11 @@ public:
 	FORCEINLINE	float GetTotalHit() const { return TotalHit; }
 
 	void SetTotalHit(float Value);
+
+	UFUNCTION(BlueprintCallable, Category = "TrialProject | PlayerInfo")
+	FORCEINLINE	float GetTotalDamageDone() const { return TotalDamageDone; }
+
+	void SetTotalDamageDone(float Value);
 
 	/** End of Interface */
 

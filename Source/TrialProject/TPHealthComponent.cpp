@@ -2,6 +2,7 @@
 
 
 #include "TPHealthComponent.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
 UTPHealthComponent::UTPHealthComponent()
@@ -14,28 +15,36 @@ UTPHealthComponent::UTPHealthComponent()
 	CurrentHealth = MaxHealth;
 }
 
+/*
+void UTPHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UTPHealthComponent, CurrentHealth);
+}
+*/
+
 // Called when the game starts
 void UTPHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// ...
-	AActor* Owner = GetOwner();
-	if (Owner)
-	{
-		Owner->OnTakeAnyDamage.AddDynamic(this, &UTPHealthComponent::TakeDamage);
-		UE_LOG(LogTemp, Warning, TEXT("HealthComp, takedamage added"));
-	}
 }
 
 void UTPHealthComponent::TakeDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
+	if (CurrentHealth <= 0)
+	{
+		return;
+	}
+
 	float damageApplied = CurrentHealth - Damage;
 	SetCurrentHealth(damageApplied);
-	UE_LOG(LogTemp, Warning, TEXT("Client: Take damage %f, current health damage applied %f, current health %f/100"), Damage, damageApplied, CurrentHealth);
+	UE_LOG(LogTemp, Warning, TEXT("HealthComponent | Client: Take damage %f, current health damage applied %f, current health %f/100"), Damage, damageApplied, CurrentHealth);
+	return;
 }
 
 void UTPHealthComponent::SetCurrentHealth(float Value)
 {
-	CurrentHealth = FMath::Clamp(Value, 0.f, MaxHealth);
+	if (GetOwnerRole() == ROLE_Authority)
+		CurrentHealth = FMath::Clamp(Value, 0.f, MaxHealth);
 }

@@ -83,18 +83,20 @@ AActor* ATPTeamFightGameMode::ChoosePlayerStart(AController* Player)
 	return NULL;
 }
 
-void ATPTeamFightGameMode::PlayerHit(AController* Player, AActor* PlayerBeingHit)
+void ATPTeamFightGameMode::PlayerHit(AController* Player, AActor* PlayerBeingHit, float Damage)
 {
-	
 	if (ATPTeamFightGameState* GS = GetGameState<ATPTeamFightGameState>())
 	{
 		if (ATPPlayerState* PS = Cast<ATPPlayerState>(Player->PlayerState))
 		{
 			PS->SetTotalHit(PS->GetTotalHit() + 1);
+			PS->SetTotalDamageDone(PS->GetTotalDamageDone() + Damage); // TODO: recalculate damage if player's health before fatal hit is lower than the damage
 			ATrialProjectCharacter* HitPlayer = Cast<ATrialProjectCharacter>(PlayerBeingHit);
 			if (HitPlayer->GetPlayerState<ATPPlayerState>()->IsDead())
 			{
-				if (Cast<ATrialProjectCharacter>(PlayerBeingHit)->Instigators.Last() == Player) {
+				if (Cast<ATrialProjectCharacter>(PlayerBeingHit)->LastHitBy == Player)
+				//if (Cast<ATrialProjectCharacter>(PlayerBeingHit)->Instigators.Last() == Player) 
+				{
 					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("%s killed %s, +1 point for gryffindor"), *PS->GetPlayerNameCustom(), *HitPlayer->GetPlayerState<ATPPlayerState>()->GetPlayerNameCustom()));
 					/** Set Score for Player who got the last hit, and set Score for the Team the Player was in */
 					PS->SetScore(PS->GetScore() + 1.0f);
@@ -111,12 +113,4 @@ void ATPTeamFightGameMode::PlayerHit(AController* Player, AActor* PlayerBeingHit
 			}
 		}
 	}
-}
-
-void ATPTeamFightGameMode::StartPlay()
-{
-	Super::StartPlay();
-
-	UWorld* World = GetWorld();
-	World->GetTimerManager().SetTimer(MatchTimer, this, &ATPTeamFightGameMode::EndPlay, MatchTime, false);
 }

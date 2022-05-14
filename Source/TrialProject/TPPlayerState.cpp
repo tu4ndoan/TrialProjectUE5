@@ -9,11 +9,13 @@ ATPPlayerState::ATPPlayerState()
 	bReplicates = true;
 	bUseCustomPlayerNames = true;
 	SetPlayerName("Default Name");
+
 	/** Defaults */
-	bTeamB = false; // Team will be set by the gamemode, bTeamB = false meaning u're in team A
+	bTeamB = false;
 	bIsDead = false;
 	TotalSwingAttempt = 0.f;
 	TotalHit = 0.f;
+	TotalDamageDone = 0.f;
 	if (GEngine)
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Purple, FString::Printf(TEXT("PlayerName is %s"), *GetPlayerNameCustom()));
 }
@@ -26,6 +28,7 @@ void ATPPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ATPPlayerState, bIsDead);
 	DOREPLIFETIME(ATPPlayerState, TotalSwingAttempt);
 	DOREPLIFETIME(ATPPlayerState, TotalHit);
+	DOREPLIFETIME(ATPPlayerState, TotalDamageDone);
 }
 
 void ATPPlayerState::SetTeamB(bool IsTeamB)
@@ -49,6 +52,12 @@ void ATPPlayerState::SetTotalHit(float Value)
 {
 	if (HasAuthority())
 		TotalHit = Value;
+}
+
+void ATPPlayerState::SetTotalDamageDone(float Value)
+{
+	if (HasAuthority())
+		TotalDamageDone = Value;
 }
 
 void ATPPlayerState::TPSetPlayerName_Implementation(const FString &InName)

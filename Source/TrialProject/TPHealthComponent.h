@@ -16,6 +16,9 @@ public:
 	// Sets default values for this component's properties
 	UTPHealthComponent();
 
+	/** Property replication */
+	//void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

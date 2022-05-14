@@ -2,60 +2,56 @@
 trial project, unreal engine 5, cosu games
 
 ## Trial Project
-- GameMode:
-  - Team fight, 2 teams
-  - In some defined time
-  - If you kill an enemy, your team get score
-  - If you hit an enemy, your hit count is recorded (for leaderboard)
-  - hit event
 
-- GameState:
-  - handle score of 2 teams
-  - handle hit count of player (show leaderboard in-game)
-  - hit event?
-
-- GameInstanceSubsystem:
-  - interface for sessions...
-
-- PlayerState:
-  - keep player's information
-
-- TrialProjectCharacter:
- - 2 attacks
- - simple health
- - sword (box collision component) used to generate overlap event when you hit someone
- - handle overlap event
-
-## TODO:
-
-  - Handle Player joins in-progress (sync animation, skeletal mesh, bone loc...)
-  - Sphere Trace to hit sth
+  - Basic Sword Combat system
+  - 2 Attacks
+  - 2 Teams
+  - Damage/Health system
+  - Score system:
+    - Record Attack Events:
+      - How many hits
+      - How many swings
+      - Total Damage done
+  - Networking Requirements:
+    - Attack events must be replicated so that players that join during the match can see the exact state of the animation playing
+    - Damage and health system separately
 
 ## Currently has:
 
- - 2 Simple Attacks (networked)
+  - 2 Teams
+  - 2 Simple Attacks (Sphere Trace):
+    - Skill 1: Dash in and slash (deal damage to enemy on the way)
+    - Skill 2: Hit sword to the ground creating an explosion (cause impulse and deal radial damage)
+    - Combo using 1 2 or 2 1
+    - Nice to have:
+      - Allow player to parry the hit (reduce most damage)
+      - Ultimate skill (usable when have enough mana)
+  - Simple Health system:
+    - Max Health
+    - Current Health
+    - Player Die
+  - Simple Damage system:
+    - Player has a base damage (set default = 10 in character constructor)
+    - Actual Damage to apply is calculated by character base damage + weapon damage
+    - Actual Damage to take will be Actual Damage applied - Player's resistance/armor
+    - Apply Damage
+    - Take Damage
+  - GM assign team when player join, still working on a simple damage system
+  - Player State (Player Name, Player Score, Total Swing Attempt, Total Hit, Total Damage Done)
+  - Score System:
+    - Team Score (Team A, Team B)
+    - Player Score:
+      - Total kills (+1 personal score for who last hit an enemy)
+      - Total swing attempt
+      - Total hits
+      - Total Damage done
+  - Session Interface
 
- - Create Session, Find Session, Join Session
- - Simple Health system
- - Add game mode, game state, player state,
- - total hit count
- - auto assign team when player join, still working on a simple damage system
+## Current issue
 
-## Working On:
-
- - Improve Damage system
- - Improve Health system
-
-## current issue
-
- - AnimMontage Death and HitReact can't play
+  - Animation Death and Hit React don't play
 
 ## For Testing
 
-  - open editor, run dedicated server
-  - open 2 client.bat
-  - call open 127.0.0.1:17777 on each client.bat instance
-  - test 2 clients, ignore the first client spawn by the editor
-  - should build a dedicated server instead?
-
-## end
+  - open editor, play as client
+  - tick run separate server
