@@ -177,8 +177,6 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerAttack(AActor* HitActor);
 
-	void TakeRadialDamage();
-
 /** End of Attack */
 
 /** Damage System */
@@ -200,6 +198,9 @@ public:
 	void SweepTrace(); // Attack B, trace a big sphere at player location, deal radial damage to enemy around and pushing enemy away
 
 	TArray<AController*> Instigators;
+	
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	//class URadialForceComponent* ForceComp;
 
 /** End of Damage System */
 

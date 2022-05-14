@@ -13,6 +13,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TPPlayerState.h"
 #include "TPProjectile.h"
+#include "PhysicsEngine/RadialForceComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ATrialProjectCharacter
@@ -81,8 +82,19 @@ ATrialProjectCharacter::ATrialProjectCharacter()
 	// TODO Player Mana
 
 	DamageType = UDamageType::StaticClass();
-	DamageType.GetDefaultObject()->DamageImpulse = 10000;
+	//DamageType.GetDefaultObject()->DamageImpulse = 10.f;
+	DamageType.GetDefaultObject()->bRadialDamageVelChange = true;
+	DamageType.GetDefaultObject()->bScaleMomentumByMass = true;
+
 	Damage = 10.0f;
+
+	//ForceComp = CreateDefaultSubobject<URadialForceComponent>(TEXT("hello"));
+	//ForceComp->Radius = 500.f;
+	//ForceComp->ImpulseStrength = 200000.f;
+	//ForceComp->ForceStrength = 100000.f;
+	//ForceComp->bImpulseVelChange = true;
+	//ForceComp->bIgnoreOwningActor = true;
+	//ForceComp->SetIsReplicated(true);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -249,7 +261,7 @@ void ATrialProjectCharacter::OnRep_AttackPrimaryB()
 
 
 /** Sphere Trace */
-void ATrialProjectCharacter::SphereTrace_Implementation()
+void ATrialProjectCharacter::SphereTrace_Implementation() // For Attack A: Dash and Slash
 {
 	if (HasAuthority())
 	{
@@ -289,7 +301,7 @@ void ATrialProjectCharacter::SphereTrace_Implementation()
 								ATPTeamFightGameMode* GM = GetWorld() != NULL ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL;
 								if (GM)
 								{
-									GM->PlayerHit(Controller, HitActor, Damage);
+									//GM->PlayerHit(Controller, HitActor, Damage);
 								}
 							}
 						}
@@ -297,14 +309,13 @@ void ATrialProjectCharacter::SphereTrace_Implementation()
 				}
 			}
 		}
-		//GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
 	}
 }
 /** End of Sphere Trace */
 
 /** Sphere Trace */
 
-void ATrialProjectCharacter::SweepTrace_Implementation()
+void ATrialProjectCharacter::SweepTrace_Implementation() // For Attack B: Hit Sword to the ground, create explosion
 {
 	if (HasAuthority())
 	{
@@ -319,17 +330,15 @@ void ATrialProjectCharacter::SweepTrace_Implementation()
 		TArray<AActor*> ActorsToIgnore;
 		ActorsToIgnore.Add(this);
 
-		float InnerRadius = 100.f;
-		float OuterRadius = 500.f;
-		float FallOffRate = 10.f;
-		float MinimumDamage = 5.f;
-		float BaseDamage = Damage;
-		UGameplayStatics::ApplyRadialDamageWithFalloff(GetWorld(), BaseDamage, MinimumDamage, Start, InnerRadius, OuterRadius, FallOffRate, DamageType, ActorsToIgnore, this, GetInstigator()->GetController(), ECC_Visibility);
-		const bool bHitSomething = UKismetSystemLibrary::SphereTraceMulti(GetWorld(), Start, End, Radius, UEngineTypes::ConvertToTraceType(ECC_Camera), false, ActorsToIgnore, EDrawDebugTrace::None, HitArray, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
+		
+		const bool bHitSomething = UKismetSystemLibrary::SphereTraceMulti(GetWorld(), Start, End, Radius, UEngineTypes::ConvertToTraceType(ECC_Camera), false, ActorsToIgnore, EDrawDebugTrace::ForDuration, HitArray, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
 		if (bHitSomething)
 		{		
+			
 			for (const FHitResult HitResult : HitArray)
 			{
+				
+
 				if (HitResult.GetActor() != this)
 				{
 					/** If hit a character */
@@ -340,15 +349,36 @@ void ATrialProjectCharacter::SweepTrace_Implementation()
 						if (HitActorState->IsTeamB() != GetPlayerState<ATPPlayerState>()->IsTeamB())
 						{
 							if (HitActorState->IsDead() == false)
-							{
+							{			
+								FVector AwayVector;
 								
+								double NewX = (HitActor->GetActorLocation().X - GetActorLocation().X);
+								double NewY = (HitActor->GetActorLocation().Y - GetActorLocation().Y);
+								double NewZ = (HitActor->GetActorLocation().Z - GetActorLocation().Z);
+								FVector newVector = AwayVector.Reciprocal();
+								//double XReverted = FMath::Pow(NewX, -1);
+								//double YReverted = FMath::Pow(NewY, -1);
+								//double ZReverted = FMath::Pow(NewZ)
+								GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("%f, %f, %f"), NewX, NewY, NewZ));
+								AwayVector.Set(NewX, NewY, NewZ);
+
+								HitActor->LaunchCharacter(AwayVector*10, false, false);
+
+								//URadialForceComponent* comp = CreateDefaultSubobject<URadialForceComponent>(TEXT("hello"));
 								
+								//ForceComp->FireImpulse();
 								
-								//UGameplayStatics::ApplyDamage(HitActor, Damage, GetInstigator()->GetController(), this, DamageType);
+								float InnerRadius = 100.f;
+								float OuterRadius = 500.f;
+								float FallOffRate = 1.f;
+								float MinimumDamage = 5.f;
+								float BaseDamage = Damage;
+								UGameplayStatics::ApplyRadialDamageWithFalloff(GetWorld(), BaseDamage, MinimumDamage, Start, InnerRadius, OuterRadius, FallOffRate, DamageType, ActorsToIgnore, this, GetInstigator()->GetController(), ECC_Visibility);
+
 								ATPTeamFightGameMode* GM = GetWorld() != NULL ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL;
 								if (GM)
 								{
-									GM->PlayerHit(Controller, HitActor, Damage);
+									//GM->PlayerHit(Controller, HitActor, Damage);
 								}
 							}
 						}
@@ -370,7 +400,7 @@ void ATrialProjectCharacter::OnHealthUpdate()
 		if (CurrentHealth <= 0)
 		{
 			GetPlayerState<ATPPlayerState>()->SetIsDead(true);
-			
+			PlayerDie();
 		}
 	}
 }
@@ -400,10 +430,16 @@ float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent 
 
 	float damageApplied = CurrentHealth - ActualDamage;
 	SetCurrentHealth(damageApplied);
-	if (damageApplied == 0)
+
+	if (HasAuthority())
 	{
-		PlayerDie();
+		ATPTeamFightGameMode* GM = GetWorld() != NULL ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL;
+		if (GM)
+		{
+			GM->PlayerHit(EventInstigator, this, ActualDamage);
+		}
 	}
+	
 
 	if (GEngine)
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("%s took %f damage, current health %f/100"), *GetPlayerState<ATPPlayerState>()->GetPlayerNameCustom(), DamageTaken, GetCurrentHealth()));
@@ -415,7 +451,7 @@ void ATrialProjectCharacter::PlayerDie_Implementation()
 {
 	//PlayAnimMontage(M_Dead);
 	GetMovementComponent()->Deactivate();
-	GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	//GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 	GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
 	GetMesh()->SetSimulatePhysics(true);
 	if (ATPPlayerController* PC = Cast<ATPPlayerController>(Controller))
@@ -430,15 +466,4 @@ void ATrialProjectCharacter::ServerAttack_Implementation(AActor* HitActor)
 	{
 		// TODO: dynamic attack system
 	}
-}
-
-// player cast sphere trace locally
-// if spheretrace has valid enemy hit
-	// call Server_SphereTrace (HitActor, HitInstigator, Damage)
-	// or just call Server_DealDamage with validation(if player actually hit someone, validate with another sphere trace?)
-
-void ATrialProjectCharacter::TakeRadialDamage()
-{
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Take radial damage"));
 }
