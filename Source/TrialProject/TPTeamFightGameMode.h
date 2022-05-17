@@ -26,6 +26,14 @@ public:
 
 	void PlayerHit(AController* Player, AActor* PlayerBeingHit, float Damage);
 
+	void PreInitializeComponents() override;
+
+	void DefaultTimer();
+
+	void HandleMatchHasStarted() override;
+
 	float MatchTime;
-	FTimerHandle MatchTimer;
+
+	FTimerHandle DefaultTimerHandle;
+
 };

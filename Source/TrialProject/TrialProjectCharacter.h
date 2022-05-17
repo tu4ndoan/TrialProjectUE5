@@ -172,11 +172,6 @@ protected:
 	UFUNCTION()
 	void OnRep_AttackPrimaryB();
 
-public:
-
-	UFUNCTION(Server, Reliable)
-	void ServerAttack(AActor* HitActor);
-
 /** End of Attack */
 
 /** Damage System */
@@ -191,16 +186,11 @@ protected:
 
 public:
 
-	UFUNCTION(Server, BlueprintCallable, Reliable)
+	UFUNCTION(Server, Reliable)
 	void SphereTrace(); // Attack A, trace a long sphere ahead, deal damage to enemy on the way (like a big thick linetrace)
 
 	UFUNCTION(Server, Reliable)
 	void SweepTrace(); // Attack B, trace a big sphere at player location, deal radial damage to enemy around and pushing enemy away
-
-	TArray<AController*> Instigators;
-	
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	//class URadialForceComponent* ForceComp;
 
 /** End of Damage System */
 

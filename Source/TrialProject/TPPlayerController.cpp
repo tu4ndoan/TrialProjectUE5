@@ -17,3 +17,9 @@ void ATPPlayerController::Respawn()
 {
 	GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>()->RestartPlayer(this);
 }
+
+void ATPPlayerController::Test()
+{
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("match has ended"));
+}

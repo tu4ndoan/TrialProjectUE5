@@ -47,9 +47,20 @@ trial project, unreal engine 5, cosu games
       - Total Damage done
   - Session Interface
 
+  - Player who joins during the game in-progess can see the playing animation of other players
+
 ## Current issue
 
   - Animation Death and Hit React don't play
+  - AddRadialImpulse won't work (using launch character as alternative)
+
+## TODO
+
+  - Add Lobby interface to allow player create and join lobby
+  - Apply Online Beacon to implement Lobby
+  - Reserve a slot in the lobby while waiting game start
+  - Only replicate player state when player press C (show player state, info)
+  - Only replicate player inventory when player press open inventory
 
 ## For Testing
 

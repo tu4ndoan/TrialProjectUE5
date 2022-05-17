@@ -26,6 +26,8 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 	float TeamBScore;
 
+	
+
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "TrialProject | Team")
@@ -37,5 +39,8 @@ public:
 	void SetTeamAScore(float Value);
 
 	void SetTeamBScore(float Value);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+	float TimeRemaining;
 
 };

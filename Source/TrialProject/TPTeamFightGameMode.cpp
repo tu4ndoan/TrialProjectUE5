@@ -20,7 +20,14 @@ ATPTeamFightGameMode::ATPTeamFightGameMode()
 	PlayerControllerClass = ATPPlayerController::StaticClass();
 	PlayerStateClass = ATPPlayerState::StaticClass();
 	GameStateClass = ATPTeamFightGameState::StaticClass();
-	MatchTime = 60.f;
+	MatchTime = 20.f;
+}
+
+void ATPTeamFightGameMode::PreInitializeComponents()
+{
+	Super::PreInitializeComponents();
+
+	GetWorldTimerManager().SetTimer(DefaultTimerHandle, this, &ATPTeamFightGameMode::DefaultTimer, GetWorldSettings()->GetEffectiveTimeDilation(), true);
 }
 
 void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
@@ -58,6 +65,64 @@ void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
 				PS->SetTeamB(false);
 			}
 			/** End of If*/
+		}
+	}
+}
+
+void ATPTeamFightGameMode::DefaultTimer()
+{
+	ATPTeamFightGameState* const GS = GetGameState<ATPTeamFightGameState>();
+	if (GS && GS->TimeRemaining > 0)
+	{
+		GS->TimeRemaining--;
+		if (GS->TimeRemaining <= 0)
+		{
+			if (GetMatchState() == MatchState::WaitingPostMatch)
+			{
+				RestartGame();
+			}
+			else if (GetMatchState() == MatchState::InProgress)
+			{
+				//FinishMatch();
+
+				// Send end round events
+				for (FConstControllerIterator It = GetWorld()->GetControllerIterator(); It; ++It)
+				{
+					ATPPlayerController* PlayerController = Cast<ATPPlayerController>(*It);
+
+					if (PlayerController && GS)
+					{
+						ATPPlayerState* PlayerState = Cast<ATPPlayerState>((*It)->PlayerState);
+						//const bool bIsWinner = IsWinner(PlayerState);
+
+						PlayerController->Test(); // show match result
+					}
+				}
+			}
+			else if (GetMatchState() == MatchState::WaitingToStart)
+			{
+				StartMatch();
+			}
+		}
+	}
+}
+
+void ATPTeamFightGameMode::HandleMatchHasStarted()
+{
+	//bNeedsBotCreation = true;
+	Super::HandleMatchHasStarted();
+
+	ATPTeamFightGameState* const MyGameState = Cast<ATPTeamFightGameState>(GameState);
+	MyGameState->TimeRemaining = MatchTime;
+	//StartBots();
+
+	// notify players
+	for (FConstControllerIterator It = GetWorld()->GetControllerIterator(); It; ++It)
+	{
+		ATPPlayerController* PC = Cast<ATPPlayerController>(*It);
+		if (PC)
+		{
+			//PC->Test();
 		}
 	}
 }

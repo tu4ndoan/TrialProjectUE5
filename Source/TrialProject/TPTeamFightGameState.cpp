@@ -17,6 +17,7 @@ void ATPTeamFightGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 
 	DOREPLIFETIME(ATPTeamFightGameState, TeamAScore);
 	DOREPLIFETIME(ATPTeamFightGameState, TeamBScore);
+	DOREPLIFETIME(ATPTeamFightGameState, TimeRemaining);
 }
 
 void ATPTeamFightGameState::SetTeamAScore(float Value)
