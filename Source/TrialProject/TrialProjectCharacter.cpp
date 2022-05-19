@@ -11,7 +11,6 @@
 #include "TPPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "TPPlayerState.h"
-#include "TPAnimInstance.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -68,8 +67,6 @@ ATrialProjectCharacter::ATrialProjectCharacter()
 
 	DamageType = UDamageType::StaticClass();
 	Damage = 10.0f;
-
-	
 }
 
 //////////////////////////////////////////////////////////////////////////

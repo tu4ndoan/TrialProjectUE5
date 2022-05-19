@@ -10,6 +10,9 @@
 /**
  * 
  */
+
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTPOnHasNewPlayerJoin, bool, Successful);
+
 UCLASS()
 class TRIALPROJECT_API ATPTeamFightGameMode : public AGameMode
 {
@@ -18,6 +21,8 @@ class TRIALPROJECT_API ATPTeamFightGameMode : public AGameMode
 public:
 
 	ATPTeamFightGameMode();
+
+	//FTPOnHasNewPlayerJoin OnHasNewPlayerJoinEvent;
 
 	void PostLogin(APlayerController* NewPlayer) override;
 

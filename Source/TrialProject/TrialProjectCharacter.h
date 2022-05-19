@@ -6,7 +6,6 @@
 #include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
 #include "TPHealthComponent.h"
-#include "TPWeapon.h"
 #include "TrialProjectCharacter.generated.h"
 
 UCLASS(config=Game)
@@ -75,13 +74,11 @@ public:
 
 protected:
 
-	//UPROPERTY(EditDefaultsOnly, Category = "TrialProject | Health")
 	float MaxHealth;
 
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentHealth)
 	float CurrentHealth;
 
-	//UFUNCTION(BlueprintCallable, Category = "TrialProject | Health")
 	void SetCurrentHealth(float healthValue);
 
 	UFUNCTION()
@@ -175,7 +172,6 @@ protected:
 
 protected:
 
-	//UFUNCTION(BlueprintCallable, Category = "TrialProject | Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	UFUNCTION(NetMulticast, Reliable, Category = "TrialProject | Health")
