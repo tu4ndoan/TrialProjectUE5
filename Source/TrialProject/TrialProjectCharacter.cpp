@@ -67,6 +67,12 @@ ATrialProjectCharacter::ATrialProjectCharacter()
 
 	DamageType = UDamageType::StaticClass();
 	Damage = 10.0f;
+
+	if (HasAuthority())
+	{
+		if (ATPTeamFightGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL)
+			GM->OnGameModeCombinedPostLogin().AddUFunction(this, FName("UpdateCurrentActiveMontage"));
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -161,15 +167,6 @@ void ATrialProjectCharacter::MoveRight(float Value)
 		AddMovementInput(Direction, Value);
 	}
 }
-
-void ATrialProjectCharacter::Tick(float DeltaSeconds)
-{
-	Super::Tick(DeltaSeconds);
-
-	// TODO, set the variable only when newplayer join
-	UpdateCurrentActiveMontage();
-}
-
 
 void ATrialProjectCharacter::SetAttacking(bool IsAttacking)
 {

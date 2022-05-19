@@ -69,6 +69,13 @@ void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
 	}
 }
 
+void ATPTeamFightGameMode::OnPostLogin(AController* NewPlayer)
+{
+	Super::OnPostLogin(NewPlayer);
+
+	OnGameModeCombinedPostLoginDelegate.Broadcast();
+}
+
 void ATPTeamFightGameMode::DefaultTimer()
 {
 	ATPTeamFightGameState* const GS = GetGameState<ATPTeamFightGameState>();

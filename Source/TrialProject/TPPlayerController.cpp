@@ -21,10 +21,7 @@ void ATPPlayerController::BeginPlay()
 		{
 			if (UAnimMontage* CurrentMontage = StartItr->CurrentActiveMontage)
 			{
-				float CurrentMontage_Position = StartItr->CurrentActiveMontage_Position;
-				if (CurrentMontage)
-					StartItr->GetMesh()->GetAnimInstance()->Montage_Play(CurrentMontage, 1.0f, EMontagePlayReturnType::MontageLength, CurrentMontage_Position, true);
-
+				StartItr->GetMesh()->GetAnimInstance()->Montage_Play(CurrentMontage, 1.0f, EMontagePlayReturnType::MontageLength, StartItr->CurrentActiveMontage_Position, true);
 			}
 		}
 	}

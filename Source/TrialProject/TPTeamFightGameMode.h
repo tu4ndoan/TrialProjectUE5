@@ -11,7 +11,7 @@
  * 
  */
 
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTPOnHasNewPlayerJoin, bool, Successful);
+DECLARE_MULTICAST_DELEGATE(FOnGameModeCombinedPostLogin);
 
 UCLASS()
 class TRIALPROJECT_API ATPTeamFightGameMode : public AGameMode
@@ -26,20 +26,27 @@ public:
 
 	void PostLogin(APlayerController* NewPlayer) override;
 
-	AActor* ChoosePlayerStart(AController* Player);
+	void OnPostLogin(AController* NewPlayer) override;
 
 	bool ShouldSpawnAtStartSpot(AController* Player) override { return false; };
 
-	void PlayerHit(AController* Player, AActor* PlayerBeingHit, float Damage);
-
 	void PreInitializeComponents() override;
+
+	void HandleMatchHasStarted() override;
+
+	AActor* ChoosePlayerStart(AController* Player);
 
 	void DefaultTimer();
 
-	void HandleMatchHasStarted() override;
+	void PlayerHit(AController* Player, AActor* PlayerBeingHit, float Damage);
 
 	float MatchTime;
 
 	FTimerHandle DefaultTimerHandle;
+
+	FOnGameModeCombinedPostLogin& OnGameModeCombinedPostLogin() { return OnGameModeCombinedPostLoginDelegate; }
+
+private:
+	FOnGameModeCombinedPostLogin OnGameModeCombinedPostLoginDelegate;
 
 };
