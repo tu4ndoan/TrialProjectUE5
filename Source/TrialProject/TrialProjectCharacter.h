@@ -63,6 +63,8 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
+	virtual void Tick(float DeltaSeconds) override;
+
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -73,23 +75,18 @@ public:
 
 protected:
 
-	/** The player's maximum health. This is the highest that their health can be, and the value that their health starts at when spawned.*/
-	UPROPERTY(EditDefaultsOnly, Category = "Health")
+	//UPROPERTY(EditDefaultsOnly, Category = "TrialProject | Health")
 	float MaxHealth;
 
-	/** The player's current health. When reduced to 0, they are considered dead.*/
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentHealth)
 	float CurrentHealth;
 
-	/** Setter for Current Health. Clamps the value between 0 and MaxHealth and calls OnHealthUpdate. Should only be called on the server.*/
-	UFUNCTION(BlueprintCallable, Category = "TrialProject | Health")
+	//UFUNCTION(BlueprintCallable, Category = "TrialProject | Health")
 	void SetCurrentHealth(float healthValue);
 
-	/** RepNotify for changes made to current health.*/
 	UFUNCTION()
 	void OnRep_CurrentHealth();
 
-	/** Response to health being updated. Called on the server immediately after modification, and on clients in response to a RepNotify*/
 	void OnHealthUpdate();
 
 public:
@@ -108,19 +105,25 @@ public:
 
 protected:
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animations)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TrialProject | Effects")
 	UAnimMontage* M_AttackPrimaryA;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animations)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TrialProject | Effects")
 	UAnimMontage* M_AttackPrimaryB;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animations)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TrialProject | Effects")
 	UAnimMontage* M_Dead;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animations)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TrialProject | Effects")
 	UAnimMontage* M_ReactToHit;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sounds)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TrialProject | Effects")
+	UAnimationAsset* Anim_Death;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TrialProject | Effects")
+	UAnimationAsset* Anim_OnHit;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TrialProject | Effects")
 	USoundBase* S_AttackB;
 
 /** end of Anim Montage, Sound, Particles */
@@ -131,29 +134,24 @@ protected:
 
 	FTimerHandle AttackHandle;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Attacks, Replicated)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "TrialProject | Attacks")
 	bool bIsAttacking;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AttackPrimaryA, Category = Attacks)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AttackPrimaryA, Category = "TrialProject | Attacks")
 	bool bAttackPrimaryA;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AttackPrimaryB, Category = Attacks)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AttackPrimaryB, Category = "TrialProject | Attacks")
 	bool bAttackPrimaryB;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
 	TSubclassOf<UDamageType> DamageType;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
 	float Damage;
 
-	UFUNCTION(BlueprintCallable, Category = Attack)
 	void SetAttacking(bool IsAttacking);
 
-	UFUNCTION(BlueprintCallable, Category = Attack)
 	void StopAttacking();
 
 	// Attack A
-	UFUNCTION(BlueprintCallable, Category = Attack)
 	void StartAttackPrimaryA();
 
 	UFUNCTION(Server, Reliable)
@@ -163,7 +161,6 @@ protected:
 	void OnRep_AttackPrimaryA();
 
 	// Attack B
-	UFUNCTION(BlueprintCallable, Category = Attack)
 	void StartAttackPrimaryB();
 
 	UFUNCTION(Server, Reliable)
@@ -178,7 +175,7 @@ protected:
 
 protected:
 
-	UFUNCTION(BlueprintCallable, Category = "TrialProject | Health")
+	//UFUNCTION(BlueprintCallable, Category = "TrialProject | Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	UFUNCTION(NetMulticast, Reliable, Category = "TrialProject | Health")
@@ -187,12 +184,30 @@ protected:
 public:
 
 	UFUNCTION(Server, Reliable)
-	void SphereTrace(); // Attack A, trace a long sphere ahead, deal damage to enemy on the way (like a big thick linetrace)
+	void SphereTrace();
 
 	UFUNCTION(Server, Reliable)
-	void SweepTrace(); // Attack B, trace a big sphere at player location, deal radial damage to enemy around and pushing enemy away
+	void SweepTrace();
 
 /** End of Damage System */
 
+	UFUNCTION(NetMulticast, Reliable)
+	void NMC_PlayAnimMontage(UAnimMontage* InAnimMontage);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void NMC_PlayAnimation(UAnimationAsset* InAnimationAsset);
+
+/** Animation */
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "TrialProject | Animation")
+	UAnimMontage* CurrentActiveMontage;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "TrialProject | Animation")
+	float CurrentActiveMontage_Position; // the current state of the animation playing
+
+	UFUNCTION(Server, Reliable)
+	void UpdateCurrentActiveMontage();
+
+/** End of Animation */
 };
 

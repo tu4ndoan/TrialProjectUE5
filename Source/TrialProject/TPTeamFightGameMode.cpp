@@ -20,7 +20,7 @@ ATPTeamFightGameMode::ATPTeamFightGameMode()
 	PlayerControllerClass = ATPPlayerController::StaticClass();
 	PlayerStateClass = ATPPlayerState::StaticClass();
 	GameStateClass = ATPTeamFightGameState::StaticClass();
-	MatchTime = 20.f;
+	MatchTime = 60.f;
 }
 
 void ATPTeamFightGameMode::PreInitializeComponents()
@@ -36,6 +36,7 @@ void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
 
 	if (NewPlayer)
 	{
+		// set team for new player
 		ATPPlayerState* PS = Cast<ATPPlayerState>(NewPlayer->PlayerState);
 		if (PS && GameState)
 		{
@@ -55,8 +56,7 @@ void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
 						NumTeamA++;
 					}
 				}
-			}
-			/** If members of team A is more than members of team B */ 
+			}		
 			if (NumTeamA > NumTeamB) 
 			{
 				PS->SetTeamB(true);
@@ -64,7 +64,7 @@ void ATPTeamFightGameMode::PostLogin(APlayerController* NewPlayer)
 			else {
 				PS->SetTeamB(false);
 			}
-			/** End of If*/
+
 		}
 	}
 }
@@ -83,9 +83,6 @@ void ATPTeamFightGameMode::DefaultTimer()
 			}
 			else if (GetMatchState() == MatchState::InProgress)
 			{
-				//FinishMatch();
-
-				// Send end round events
 				for (FConstControllerIterator It = GetWorld()->GetControllerIterator(); It; ++It)
 				{
 					ATPPlayerController* PlayerController = Cast<ATPPlayerController>(*It);
@@ -93,9 +90,7 @@ void ATPTeamFightGameMode::DefaultTimer()
 					if (PlayerController && GS)
 					{
 						ATPPlayerState* PlayerState = Cast<ATPPlayerState>((*It)->PlayerState);
-						//const bool bIsWinner = IsWinner(PlayerState);
-
-						PlayerController->Test(); // show match result
+						// TODO tell player who win the match
 					}
 				}
 			}
@@ -109,32 +104,31 @@ void ATPTeamFightGameMode::DefaultTimer()
 
 void ATPTeamFightGameMode::HandleMatchHasStarted()
 {
-	//bNeedsBotCreation = true;
 	Super::HandleMatchHasStarted();
 
 	ATPTeamFightGameState* const MyGameState = Cast<ATPTeamFightGameState>(GameState);
 	MyGameState->TimeRemaining = MatchTime;
-	//StartBots();
 
-	// notify players
 	for (FConstControllerIterator It = GetWorld()->GetControllerIterator(); It; ++It)
 	{
 		ATPPlayerController* PC = Cast<ATPPlayerController>(*It);
 		if (PC)
 		{
-			//PC->Test();
+			// TODO: tell player match has started
 		}
 	}
 }
 
 AActor* ATPTeamFightGameMode::ChoosePlayerStart(AController* Player)
 {
+	/** Choose start for player according to player's team */
 	if (Player)
 	{
 		ATPPlayerState* PS = Cast<ATPPlayerState>(Player->PlayerState);
 		if (PS)
 		{
 			TArray<ATPPlayerStart*> Starts;
+			/** loop all actors of class ATPPlayerStart in the world */
 			for (TActorIterator<ATPPlayerStart> StartItr(GetWorld()); StartItr; ++StartItr)
 			{
 				if (StartItr->bTeamB == PS->IsTeamB())
@@ -155,14 +149,12 @@ void ATPTeamFightGameMode::PlayerHit(AController* Player, AActor* PlayerBeingHit
 		if (ATPPlayerState* PS = Cast<ATPPlayerState>(Player->PlayerState))
 		{
 			PS->SetTotalHit(PS->GetTotalHit() + 1);
-			PS->SetTotalDamageDone(PS->GetTotalDamageDone() + Damage); // TODO: recalculate damage if player's health before fatal hit is lower than the damage
+			PS->SetTotalDamageDone(PS->GetTotalDamageDone() + Damage);
 			ATrialProjectCharacter* HitPlayer = Cast<ATrialProjectCharacter>(PlayerBeingHit);
 			if (HitPlayer->GetPlayerState<ATPPlayerState>()->IsDead())
 			{
-				if (Cast<ATrialProjectCharacter>(PlayerBeingHit)->LastHitBy == Player)
-				//if (Cast<ATrialProjectCharacter>(PlayerBeingHit)->Instigators.Last() == Player) 
+				if (Cast<ATrialProjectCharacter>(PlayerBeingHit)->LastHitBy == Player) 
 				{
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("%s killed %s, +1 point for gryffindor"), *PS->GetPlayerNameCustom(), *HitPlayer->GetPlayerState<ATPPlayerState>()->GetPlayerNameCustom()));
 					/** Set Score for Player who got the last hit, and set Score for the Team the Player was in */
 					PS->SetScore(PS->GetScore() + 1.0f);
 					if (PS->IsTeamB())
@@ -173,8 +165,7 @@ void ATPTeamFightGameMode::PlayerHit(AController* Player, AActor* PlayerBeingHit
 					{
 						GS->SetTeamAScore(GS->GetTeamAScore() + 1.0f);
 					}
-				}
-				
+				}		
 			}
 		}
 	}

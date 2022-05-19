@@ -4,27 +4,15 @@
 #include "TPHealthComponent.h"
 #include "Net/UnrealNetwork.h"
 
-// Sets default values for this component's properties
+
 UTPHealthComponent::UTPHealthComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
-	// ...
+
 	MaxHealth = 100;
 	CurrentHealth = MaxHealth;
 }
 
-/*
-void UTPHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(UTPHealthComponent, CurrentHealth);
-}
-*/
-
-// Called when the game starts
 void UTPHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();

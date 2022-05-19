@@ -21,5 +21,5 @@ public:
 
 	void Respawn();
 
-	void Test();
+	void BeginPlay() override;
 };

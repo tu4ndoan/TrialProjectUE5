@@ -16,6 +16,7 @@ class TRIALPROJECT_API ATPTeamFightGameMode : public AGameMode
 	GENERATED_BODY()
 
 public:
+
 	ATPTeamFightGameMode();
 
 	void PostLogin(APlayerController* NewPlayer) override;

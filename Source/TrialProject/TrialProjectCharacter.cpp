@@ -11,6 +11,7 @@
 #include "TPPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "TPPlayerState.h"
+#include "TPAnimInstance.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -65,14 +66,10 @@ ATrialProjectCharacter::ATrialProjectCharacter()
 	MaxHealth = 100.0f;
 	CurrentHealth = MaxHealth;
 
-	// TODO Player Mana
-
 	DamageType = UDamageType::StaticClass();
-	//DamageType.GetDefaultObject()->DamageImpulse = 10.f;
-	//DamageType.GetDefaultObject()->bRadialDamageVelChange = true;
-	//DamageType.GetDefaultObject()->bScaleMomentumByMass = true;
-
 	Damage = 10.0f;
+
+	
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -113,6 +110,8 @@ void ATrialProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	DOREPLIFETIME(ATrialProjectCharacter, bIsAttacking);
 	DOREPLIFETIME(ATrialProjectCharacter, bAttackPrimaryA);
 	DOREPLIFETIME(ATrialProjectCharacter, bAttackPrimaryB);
+	DOREPLIFETIME(ATrialProjectCharacter, CurrentActiveMontage);
+	DOREPLIFETIME(ATrialProjectCharacter, CurrentActiveMontage_Position);
 }
 
 void ATrialProjectCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
@@ -166,6 +165,15 @@ void ATrialProjectCharacter::MoveRight(float Value)
 	}
 }
 
+void ATrialProjectCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// TODO, set the variable only when newplayer join
+	UpdateCurrentActiveMontage();
+}
+
+
 void ATrialProjectCharacter::SetAttacking(bool IsAttacking)
 {
 	if (HasAuthority())
@@ -173,7 +181,6 @@ void ATrialProjectCharacter::SetAttacking(bool IsAttacking)
 		bIsAttacking = IsAttacking;
 	}
 }
-
 
 // Attack A, using RepNotify on bAttackPrimaryA
 void ATrialProjectCharacter::StopAttacking()
@@ -196,17 +203,14 @@ void ATrialProjectCharacter::AttackPrimaryA_Implementation()
 	{
 		bAttackPrimaryA = !bAttackPrimaryA;
 		SetAttacking(true);
+		NMC_PlayAnimMontage(M_AttackPrimaryA);
 		OnRep_AttackPrimaryA();
 	}
 }
 
 void ATrialProjectCharacter::OnRep_AttackPrimaryA()
 {
-	float AnimDuration = PlayAnimMontage(M_AttackPrimaryA);
 	LaunchCharacter(RootComponent->GetForwardVector() * 1500.0f, false, false);
-	if (S_AttackB != NULL)
-		UGameplayStatics::PlaySoundAtLocation(this, S_AttackB, GetActorLocation());
-	GetWorld()->GetTimerManager().SetTimer(AttackHandle, this, &ATrialProjectCharacter::StopAttacking, AnimDuration - 0.5f, false);
 }
 
 // Attack B
@@ -225,18 +229,14 @@ void ATrialProjectCharacter::AttackPrimaryB_Implementation()
 	{
 		bAttackPrimaryB = !bAttackPrimaryB;
 		SetAttacking(true);
+		NMC_PlayAnimMontage(M_AttackPrimaryB);
 		OnRep_AttackPrimaryB();
 	}
 }
 
 void ATrialProjectCharacter::OnRep_AttackPrimaryB()
 {
-	float AnimDuration = PlayAnimMontage(M_AttackPrimaryB);
-	if (S_AttackB != NULL)
-		UGameplayStatics::PlaySoundAtLocation(this, S_AttackB, GetActorLocation());
-	GetWorld()->GetTimerManager().SetTimer(AttackHandle, this, &ATrialProjectCharacter::StopAttacking, AnimDuration - 0.5f, false);
 }
-
 
 /** Sphere Trace */
 void ATrialProjectCharacter::SphereTrace_Implementation()
@@ -328,6 +328,11 @@ void ATrialProjectCharacter::OnHealthUpdate()
 {
 	if (HasAuthority())
 	{
+		if (CurrentHealth > 0)
+		{
+			NMC_PlayAnimation(Anim_OnHit);
+			
+		}
 		if (CurrentHealth <= 0)
 		{
 			GetPlayerState<ATPPlayerState>()->SetIsDead(true);
@@ -356,7 +361,7 @@ float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent 
 	{
 		return 0.f;
 	}
-	/** calculate actual damage */
+
 	const float ActualDamage = Super::TakeDamage(DamageTaken, DamageEvent, EventInstigator, DamageCauser);
 
 	float damageApplied = CurrentHealth - ActualDamage;
@@ -367,7 +372,7 @@ float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent 
 		ATPTeamFightGameMode* GM = GetWorld() != NULL ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL;
 		if (GM)
 		{
-			GM->PlayerHit(EventInstigator, this, ActualDamage); // record the hit damage and score for instigator
+			GM->PlayerHit(EventInstigator, this, ActualDamage);
 		}
 	}
 	return damageApplied;
@@ -375,13 +380,35 @@ float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent 
 
 void ATrialProjectCharacter::PlayerDie_Implementation()
 {
-	//PlayAnimMontage(M_Dead);
+	GetMesh()->PlayAnimation(Anim_Death, false);
 	GetMovementComponent()->Deactivate();
-	//GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-	GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
-	GetMesh()->SetSimulatePhysics(true);
-	if (ATPPlayerController* PC = Cast<ATPPlayerController>(Controller))
+	// TODO respawn
+}
+
+void ATrialProjectCharacter::NMC_PlayAnimMontage_Implementation(UAnimMontage* InAnimMontage)
+{
+	if (UAnimInstance* TAnimInstance = GetMesh()->GetAnimInstance())
 	{
-		//PC->OnKilled();
+		float AnimDuration = TAnimInstance->Montage_Play(InAnimMontage, 1.0f, EMontagePlayReturnType::MontageLength, 0.0f, true);
+		if (S_AttackB != NULL)
+			UGameplayStatics::PlaySoundAtLocation(this, S_AttackB, GetActorLocation());
+		GetWorld()->GetTimerManager().SetTimer(AttackHandle, this, &ATrialProjectCharacter::StopAttacking, AnimDuration - 0.5f, false);
+	}
+}
+
+void ATrialProjectCharacter::NMC_PlayAnimation_Implementation(UAnimationAsset* InAnimationAsset)
+{
+	GetMesh()->PlayAnimation(InAnimationAsset, false);
+}
+
+void ATrialProjectCharacter::UpdateCurrentActiveMontage_Implementation()
+{
+	if (UAnimInstance* AI = GetMesh()->GetAnimInstance())
+	{
+		if (UAnimMontage* CurrentMontage = AI->GetCurrentActiveMontage())
+		{
+			CurrentActiveMontage = CurrentMontage;
+			CurrentActiveMontage_Position = AI->Montage_GetPosition(CurrentActiveMontage);
+		}
 	}
 }

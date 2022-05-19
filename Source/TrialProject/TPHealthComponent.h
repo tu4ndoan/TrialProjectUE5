@@ -16,27 +16,19 @@ public:
 	// Sets default values for this component's properties
 	UTPHealthComponent();
 
-	/** Property replication */
-	//void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trial Project Health Component")
 	float MaxHealth;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Trial Project Health Component")
 	float CurrentHealth;
 
-	UFUNCTION(BlueprintCallable, Category = "Trial Project Health Component")
+	UFUNCTION(BlueprintCallable, Category = "TrialProject | HealthComponent")
 	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; };
 
-	UFUNCTION(BlueprintCallable, Category = "Trial Project Health Component")
 	FORCEINLINE void SetCurrentHealth(float Value);
 
-	UFUNCTION(BlueprintCallable)
 	void TakeDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
-
 };

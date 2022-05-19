@@ -17,7 +17,7 @@ ATPPlayerState::ATPPlayerState()
 	TotalHit = 0.f;
 	TotalDamageDone = 0.f;
 	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Purple, FString::Printf(TEXT("PlayerName is %s"), *GetPlayerNameCustom()));
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Purple, FString::Printf(TEXT("PlayerName is %s"), *GetPlayerName()));
 }
 
 void ATPPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -62,7 +62,6 @@ void ATPPlayerState::SetTotalDamageDone(float Value)
 
 void ATPPlayerState::TPSetPlayerName_Implementation(const FString &InName)
 {
-	/** Server set PLayerName and tell clients, Because for some reason the default SetPlayerName doesn't replicate */
 	if (HasAuthority())
 		SetPlayerName(InName);
 }
