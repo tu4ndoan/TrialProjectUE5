@@ -21,6 +21,7 @@ void ATPPlayerController::BeginPlay()
 		{
 			if (UAnimMontage* CurrentMontage = StartItr->CurrentActiveMontage)
 			{
+				// only see animation, not the attack, but the sphere trace is server function so if you join before the sphere trace cast, you'll also get attacked
 				StartItr->GetMesh()->GetAnimInstance()->Montage_Play(CurrentMontage, 1.0f, EMontagePlayReturnType::MontageLength, StartItr->CurrentActiveMontage_Position, true);
 			}
 		}

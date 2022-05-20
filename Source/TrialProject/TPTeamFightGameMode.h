@@ -22,8 +22,6 @@ public:
 
 	ATPTeamFightGameMode();
 
-	//FTPOnHasNewPlayerJoin OnHasNewPlayerJoinEvent;
-
 	void PostLogin(APlayerController* NewPlayer) override;
 
 	void OnPostLogin(AController* NewPlayer) override;
@@ -45,6 +43,11 @@ public:
 	FTimerHandle DefaultTimerHandle;
 
 	FOnGameModeCombinedPostLogin& OnGameModeCombinedPostLogin() { return OnGameModeCombinedPostLoginDelegate; }
+
+	int GetWinningTeam();
+
+	// spawn new actor for player
+
 
 private:
 	FOnGameModeCombinedPostLogin OnGameModeCombinedPostLoginDelegate;

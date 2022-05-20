@@ -133,12 +133,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "TrialProject | Attacks")
 	bool bIsAttacking;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AttackPrimaryA, Category = "TrialProject | Attacks")
-	bool bAttackPrimaryA;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AttackPrimaryB, Category = "TrialProject | Attacks")
-	bool bAttackPrimaryB;
-
 	TSubclassOf<UDamageType> DamageType;
 
 	float Damage;
@@ -153,17 +147,11 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void AttackPrimaryA();
 
-	UFUNCTION()
-	void OnRep_AttackPrimaryA();
-
 	// Attack B
 	void StartAttackPrimaryB();
 
 	UFUNCTION(Server, Reliable)
 	void AttackPrimaryB();
-
-	UFUNCTION()
-	void OnRep_AttackPrimaryB();
 
 /** End of Attack */
 
@@ -186,12 +174,6 @@ public:
 
 /** End of Damage System */
 
-	UFUNCTION(NetMulticast, Reliable)
-	void NMC_PlayAnimMontage(UAnimMontage* InAnimMontage);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void NMC_PlayAnimation(UAnimationAsset* InAnimationAsset);
-
 /** Animation */
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "TrialProject | Animation")
@@ -203,6 +185,17 @@ public:
 	UFUNCTION(Server, Reliable)
 	void UpdateCurrentActiveMontage();
 
+	/** multicast function called by server functions AttackPrimaryA and AttackPrimaryB, play effects (animation, sound, particle) for the attacks */
+	UFUNCTION(NetMulticast, Reliable)
+	void NMC_PlayAnimMontage(UAnimMontage* InAnimMontage);
+
+	/** play animation dead or hit react */
+	UFUNCTION(NetMulticast, Reliable)
+	void NMC_PlayAnimation(UAnimationAsset* InAnimationAsset);
+
 /** End of Animation */
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetHealthBarPercent(float InCurrentHealth);
 };
 

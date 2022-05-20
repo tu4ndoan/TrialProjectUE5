@@ -98,6 +98,18 @@ void ATPTeamFightGameMode::DefaultTimer()
 					{
 						ATPPlayerState* PlayerState = Cast<ATPPlayerState>((*It)->PlayerState);
 						// TODO tell player who win the match
+						switch (GetWinningTeam())
+						{
+						case 0:
+							UE_LOG(LogTemp, Warning, TEXT("Match Result: GS not valid"));
+							break;
+						case 1:
+							UE_LOG(LogTemp, Warning, TEXT("Match Result: Team A wins"));
+							break;
+						case 2:
+							UE_LOG(LogTemp, Warning, TEXT("Match Result: Team B wins"));
+							break;
+						}
 					}
 				}
 			}
@@ -176,4 +188,17 @@ void ATPTeamFightGameMode::PlayerHit(AController* Player, AActor* PlayerBeingHit
 			}
 		}
 	}
+}
+
+int ATPTeamFightGameMode::GetWinningTeam()
+{
+	if (ATPTeamFightGameState* GS = Cast<ATPTeamFightGameState>(GameState))
+	{
+		if (GS->GetTeamAScore() > GS->GetTeamBScore())
+			return 1; // 1 means A win
+		if (GS->GetTeamAScore() < GS->GetTeamBScore())
+			return 2; // 2 means B win
+		return 3; // 3 means tie
+	}
+	return 0;
 }

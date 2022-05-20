@@ -58,8 +58,6 @@ ATrialProjectCharacter::ATrialProjectCharacter()
 	/** Default Variables */
 	// Player Attack
 	bIsAttacking = false;
-	bAttackPrimaryA = false;
-	bAttackPrimaryB = false;
 
 	// Player Health
 	MaxHealth = 100.0f;
@@ -111,8 +109,6 @@ void ATrialProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 	DOREPLIFETIME(ATrialProjectCharacter, CurrentHealth);
 	DOREPLIFETIME(ATrialProjectCharacter, bIsAttacking);
-	DOREPLIFETIME(ATrialProjectCharacter, bAttackPrimaryA);
-	DOREPLIFETIME(ATrialProjectCharacter, bAttackPrimaryB);
 	DOREPLIFETIME(ATrialProjectCharacter, CurrentActiveMontage);
 	DOREPLIFETIME(ATrialProjectCharacter, CurrentActiveMontage_Position);
 }
@@ -176,10 +172,11 @@ void ATrialProjectCharacter::SetAttacking(bool IsAttacking)
 	}
 }
 
-// Attack A, using RepNotify on bAttackPrimaryA
+// Attack A
 void ATrialProjectCharacter::StopAttacking()
 {
-	SetAttacking(false);
+	if(HasAuthority())
+		SetAttacking(false);
 }
 
 void ATrialProjectCharacter::StartAttackPrimaryA()
@@ -195,16 +192,10 @@ void ATrialProjectCharacter::AttackPrimaryA_Implementation()
 {
 	if (HasAuthority())
 	{
-		bAttackPrimaryA = !bAttackPrimaryA;
 		SetAttacking(true);
+		LaunchCharacter(RootComponent->GetForwardVector() * 1500.0f, false, false);
 		NMC_PlayAnimMontage(M_AttackPrimaryA);
-		OnRep_AttackPrimaryA();
 	}
-}
-
-void ATrialProjectCharacter::OnRep_AttackPrimaryA()
-{
-	LaunchCharacter(RootComponent->GetForwardVector() * 1500.0f, false, false);
 }
 
 // Attack B
@@ -221,15 +212,9 @@ void ATrialProjectCharacter::AttackPrimaryB_Implementation()
 {
 	if (HasAuthority())
 	{
-		bAttackPrimaryB = !bAttackPrimaryB;
 		SetAttacking(true);
 		NMC_PlayAnimMontage(M_AttackPrimaryB);
-		OnRep_AttackPrimaryB();
 	}
-}
-
-void ATrialProjectCharacter::OnRep_AttackPrimaryB()
-{
 }
 
 /** Sphere Trace */
@@ -278,6 +263,8 @@ void ATrialProjectCharacter::SweepTrace_Implementation()
 	if (HasAuthority())
 	{
 		ATPPlayerState* PS = GetPlayerState<ATPPlayerState>();
+		if (PS)
+			PS->SetTotalSwingAttempt(PS->GetTotalSwingAttempt() + 1);
 		FVector Start = GetActorLocation();
 		FVector End = GetActorLocation();
 		float Radius = 500.f;
@@ -297,9 +284,6 @@ void ATrialProjectCharacter::SweepTrace_Implementation()
 					/** If HitActor is not dead and is not teammate*/
 					if (HitActorState != NULL && HitActorState->IsDead() != true && HitActorState->IsTeamB() != GetPlayerState<ATPPlayerState>()->IsTeamB())
 					{
-						if (PS)
-							PS->SetTotalSwingAttempt(PS->GetTotalSwingAttempt() + 1);
-
 						// params for radial damage and impulse
 						float InnerRadius = 100.f;	// radius to take max damage
 						float OuterRadius = 500.f;	// radius to take less damage
@@ -324,7 +308,7 @@ void ATrialProjectCharacter::OnHealthUpdate()
 	{
 		if (CurrentHealth > 0)
 		{
-			NMC_PlayAnimation(Anim_OnHit);
+			//NMC_PlayAnimation(Anim_OnHit);
 			
 		}
 		if (CurrentHealth <= 0)
@@ -333,6 +317,7 @@ void ATrialProjectCharacter::OnHealthUpdate()
 			PlayerDie();
 		}
 	}
+	SetHealthBarPercent(CurrentHealth);
 }
 
 void ATrialProjectCharacter::OnRep_CurrentHealth()
