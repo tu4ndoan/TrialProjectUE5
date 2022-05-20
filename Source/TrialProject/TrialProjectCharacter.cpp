@@ -181,10 +181,9 @@ void ATrialProjectCharacter::StopAttacking()
 
 void ATrialProjectCharacter::StartAttackPrimaryA()
 {
-	if (!bIsAttacking)
+	if (!bIsAttacking && !GetMovementComponent()->IsFalling())
 	{
 		AttackPrimaryA();
-		SphereTrace();
 	}
 }
 
@@ -193,7 +192,8 @@ void ATrialProjectCharacter::AttackPrimaryA_Implementation()
 	if (HasAuthority())
 	{
 		SetAttacking(true);
-		LaunchCharacter(RootComponent->GetForwardVector() * 1500.0f, false, false);
+		LaunchCharacter(RootComponent->GetForwardVector() * 1500.0f, false, false); // dash forward
+		CastLineTrace(); // cast line trace along the dash, see what we hit
 		NMC_PlayAnimMontage(M_AttackPrimaryA);
 	}
 }
@@ -204,7 +204,6 @@ void ATrialProjectCharacter::StartAttackPrimaryB()
 	if (!bIsAttacking)
 	{
 		AttackPrimaryB();
-		SweepTrace();
 	}
 }
 
@@ -213,116 +212,86 @@ void ATrialProjectCharacter::AttackPrimaryB_Implementation()
 	if (HasAuthority())
 	{
 		SetAttacking(true);
+		CastSphereTrace();
 		NMC_PlayAnimMontage(M_AttackPrimaryB);
 	}
 }
 
-/** Sphere Trace */
-void ATrialProjectCharacter::SphereTrace_Implementation()
+void ATrialProjectCharacter::CastLineTrace()
 {
-	if (HasAuthority())
+	ATPPlayerState* PS = GetPlayerState<ATPPlayerState>();
+	if (PS == NULL)
 	{
-		// increase swing attempt by 1
-		ATPPlayerState* PS = GetPlayerState<ATPPlayerState>();
-		if (PS)
-			PS->SetTotalSwingAttempt(PS->GetTotalSwingAttempt() + 1);
+		return;
+	}
 
-		// cast a trace to the world to retrieve hit
-		FVector Start = GetActorLocation();
-		FVector End = GetActorLocation() + (RootComponent->GetForwardVector() * 500.f);
-		float Radius = 50.f;
-		TArray<FHitResult> HitArray;
-		TArray<AActor*> ActorsToIgnore;
-		ActorsToIgnore.Add(this);
-
-		const bool bHitSomething = UKismetSystemLibrary::SphereTraceMulti(GetWorld(), Start, End, Radius, UEngineTypes::ConvertToTraceType(ECC_Camera), false, ActorsToIgnore, EDrawDebugTrace::None, HitArray, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
-		if (bHitSomething)
+	// cast a trace to the world to retrieve hit
+	FVector Start = GetActorLocation();
+	FVector End = GetActorLocation() + (RootComponent->GetForwardVector() * 650.f);
+	float Radius = 5.f;
+	TArray<FHitResult> HitArray;
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this);
+	const bool bLineTraceHasHit = UKismetSystemLibrary::LineTraceMulti(GetWorld(), Start, End, UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore, EDrawDebugTrace::ForDuration, HitArray, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
+	if (bLineTraceHasHit)
+	{
+		for (const FHitResult HitResult : HitArray)
 		{
-			for (const FHitResult HitResult : HitArray)
+			/** If hit a character */
+			if (ATrialProjectCharacter* HitActor = Cast<ATrialProjectCharacter>(HitResult.GetActor()))
 			{
-				/** If hit a character */
-				if (ATrialProjectCharacter* HitActor = Cast<ATrialProjectCharacter>(HitResult.GetActor()))
-				{
-					ATPPlayerState* HitActorState = HitActor->GetPlayerState<ATPPlayerState>();
-					/** If HitActor is not dead and is not teammate */
-					if (HitActorState != NULL && HitActorState->IsDead() != true && HitActorState->IsTeamB() != GetPlayerState<ATPPlayerState>()->IsTeamB())
-					{
-						UGameplayStatics::ApplyDamage(HitActor, Damage, GetInstigator()->GetController(), this, DamageType);
-					}
-				}
+				/** If HitActor is not dead and is not teammate */
+				UGameplayStatics::ApplyDamage(HitActor, Damage, GetInstigator()->GetController(), this, DamageType);
 			}
 		}
 	}
-}
-/** End of Sphere Trace */
-
-/** Sphere Trace */
-
-void ATrialProjectCharacter::SweepTrace_Implementation()
-{
-	if (HasAuthority())
+	else
 	{
-		ATPPlayerState* PS = GetPlayerState<ATPPlayerState>();
-		if (PS)
-			PS->SetTotalSwingAttempt(PS->GetTotalSwingAttempt() + 1);
-		FVector Start = GetActorLocation();
-		FVector End = GetActorLocation();
-		float Radius = 500.f;
-		TArray<FHitResult> HitArray;
-		TArray<AActor*> ActorsToIgnore;
-		ActorsToIgnore.Add(this);
-		// cast a sphere trace to the world and see if we hit something
-		const bool bHitSomething = UKismetSystemLibrary::SphereTraceMulti(GetWorld(), Start, End, Radius, UEngineTypes::ConvertToTraceType(ECC_Camera), false, ActorsToIgnore, EDrawDebugTrace::ForDuration, HitArray, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
-		if (bHitSomething)
-		{		
-			for (const FHitResult HitResult : HitArray)
+		PS->SetTotalSwingAttempt(PS->GetTotalSwingAttempt() + 1);
+	}
+}
+
+
+void ATrialProjectCharacter::CastSphereTrace()
+{
+	ATPPlayerState* PS = GetPlayerState<ATPPlayerState>();
+	if (PS == NULL)
+	{
+		return;
+	}
+
+	FVector Start = GetActorLocation();
+	FVector End = GetActorLocation();
+	float Radius = 500.f;
+	TArray<FHitResult> HitArray;
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this);
+	// cast a sphere trace to the world and see if we hit something
+	const bool bSphereTraceHasHit = UKismetSystemLibrary::SphereTraceMulti(GetWorld(), Start, End, Radius, UEngineTypes::ConvertToTraceType(ECC_Camera), false, ActorsToIgnore, EDrawDebugTrace::ForDuration, HitArray, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
+	if (bSphereTraceHasHit)
+	{
+		// params for radial damage and impulse
+		float InnerRadius = 100.f;	// radius to take max damage
+		float OuterRadius = Radius;	// radius to take less damage
+		float FallOffRate = 1.f;	// 1 means linear
+		float MinimumDamage = 1.f;
+		float BaseDamage = Damage;	// max damage = 10 when enemy is in inner radius
+		/** deal radial damage and then push other player away with linear falloff */
+		UGameplayStatics::ApplyRadialDamageWithFalloff(GetWorld(), BaseDamage, MinimumDamage, Start, InnerRadius, OuterRadius, FallOffRate, DamageType, ActorsToIgnore, this, GetInstigator()->GetController(), ECC_Visibility);
+		for (const FHitResult HitResult : HitArray)
+		{
+			/** If hit a character */
+			if (ATrialProjectCharacter* HitActor = Cast<ATrialProjectCharacter>(HitResult.GetActor()))
 			{
-				/** If hit a character */
-				if (ATrialProjectCharacter* HitActor = Cast<ATrialProjectCharacter>(HitResult.GetActor()))
-				{
-					ATPPlayerState* HitActorState = HitActor->GetPlayerState<ATPPlayerState>();
-					/** If HitActor is not dead and is not teammate*/
-					if (HitActorState != NULL && HitActorState->IsDead() != true && HitActorState->IsTeamB() != GetPlayerState<ATPPlayerState>()->IsTeamB())
-					{
-						// params for radial damage and impulse
-						float InnerRadius = 100.f;	// radius to take max damage
-						float OuterRadius = 500.f;	// radius to take less damage
-						float FallOffRate = 1.f;	// 1 means linear
-						float MinimumDamage = 1.f;
-						float BaseDamage = Damage;	// max damage = 10 when enemy is in inner radius
-						/** deal radial damage and push other player away with linear falloff */
-						UGameplayStatics::ApplyRadialDamageWithFalloff(GetWorld(), BaseDamage, MinimumDamage, Start, InnerRadius, OuterRadius, FallOffRate, DamageType, ActorsToIgnore, this, GetInstigator()->GetController(), ECC_Visibility);
-						HitActor->GetMovementComponent()->AddRadialImpulse(Start, 500.f, 2000.f, ERadialImpulseFalloff::RIF_Linear, true);
-					}
-				}
+				HitActor->GetMovementComponent()->AddRadialImpulse(Start, 500.f, 2000.f, ERadialImpulseFalloff::RIF_Linear, true);
 			}
 		}
 	}
-}
-
-/** End of Sweep Trace */
-
-void ATrialProjectCharacter::OnHealthUpdate()
-{
-	if (HasAuthority())
+	else
 	{
-		if (CurrentHealth > 0)
-		{
-			//NMC_PlayAnimation(Anim_OnHit);
-			
-		}
-		if (CurrentHealth <= 0)
-		{
-			GetPlayerState<ATPPlayerState>()->SetIsDead(true);
-			PlayerDie();
-		}
+		// still increase attempts if we cant hit an enemy
+		PS->SetTotalSwingAttempt(PS->GetTotalSwingAttempt() + 1);
 	}
-	SetHealthBarPercent(CurrentHealth);
-}
-
-void ATrialProjectCharacter::OnRep_CurrentHealth()
-{
-	OnHealthUpdate();
 }
 
 void ATrialProjectCharacter::SetCurrentHealth(float healthValue)
@@ -334,6 +303,24 @@ void ATrialProjectCharacter::SetCurrentHealth(float healthValue)
 	}
 }
 
+void ATrialProjectCharacter::OnRep_CurrentHealth()
+{
+	OnHealthUpdate();
+}
+
+void ATrialProjectCharacter::OnHealthUpdate()
+{
+	if (HasAuthority())
+	{
+		if (CurrentHealth <= 0)
+		{
+			GetPlayerState<ATPPlayerState>()->SetIsDead(true);
+			PlayerDie();
+		}
+	}
+	SetHealthBarPercent(CurrentHealth);
+}
+
 float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	if (!ShouldTakeDamage(DamageTaken, DamageEvent, EventInstigator, DamageCauser))
@@ -343,7 +330,18 @@ float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent 
 
 	const float ActualDamage = Super::TakeDamage(DamageTaken, DamageEvent, EventInstigator, DamageCauser);
 
+	if (ActualDamage <= 0.f)
+	{
+		return 0.f;
+	}
+
+	if (GetPlayerState<ATPPlayerState>()->IsTeamB() == EventInstigator->GetPlayerState<ATPPlayerState>()->IsTeamB())
+	{
+		return 0.f;
+	}
+
 	float damageApplied = CurrentHealth - ActualDamage;
+
 	SetCurrentHealth(damageApplied);
 
 	if (HasAuthority())
@@ -351,7 +349,10 @@ float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent 
 		ATPTeamFightGameMode* GM = GetWorld() != NULL ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL;
 		if (GM)
 		{
+			// increase player swing attempt, total hit, and total damage done
 			GM->PlayerHit(EventInstigator, this, ActualDamage);
+			if (ATPPlayerState* PS = EventInstigator->GetPlayerState<ATPPlayerState>())
+				PS->SetTotalSwingAttempt(PS->GetTotalSwingAttempt() + 1);
 		}
 	}
 	return damageApplied;
@@ -362,6 +363,12 @@ void ATrialProjectCharacter::PlayerDie_Implementation()
 	GetMesh()->PlayAnimation(Anim_Death, false);
 	GetMovementComponent()->Deactivate();
 	// TODO respawn
+	GetWorldTimerManager().SetTimer(RespawnTimerHandle, this, &ATrialProjectCharacter::RequestRespawn, 5.f, false);
+}
+
+void ATrialProjectCharacter::RequestRespawn()
+{
+	// TODO respawn
 }
 
 void ATrialProjectCharacter::NMC_PlayAnimMontage_Implementation(UAnimMontage* InAnimMontage)
@@ -369,15 +376,8 @@ void ATrialProjectCharacter::NMC_PlayAnimMontage_Implementation(UAnimMontage* In
 	if (UAnimInstance* TAnimInstance = GetMesh()->GetAnimInstance())
 	{
 		float AnimDuration = TAnimInstance->Montage_Play(InAnimMontage, 1.0f, EMontagePlayReturnType::MontageLength, 0.0f, true);
-		if (S_AttackB != NULL)
-			UGameplayStatics::PlaySoundAtLocation(this, S_AttackB, GetActorLocation());
-		GetWorld()->GetTimerManager().SetTimer(AttackHandle, this, &ATrialProjectCharacter::StopAttacking, AnimDuration - 0.5f, false);
+		GetWorld()->GetTimerManager().SetTimer(AttackHandle, this, &ATrialProjectCharacter::StopAttacking, AnimDuration, false);
 	}
-}
-
-void ATrialProjectCharacter::NMC_PlayAnimation_Implementation(UAnimationAsset* InAnimationAsset)
-{
-	GetMesh()->PlayAnimation(InAnimationAsset, false);
 }
 
 void ATrialProjectCharacter::UpdateCurrentActiveMontage_Implementation()

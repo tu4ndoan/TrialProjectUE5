@@ -95,6 +95,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "TrialProject | Health")
 	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetHealthBarPercent(float InCurrentHealth);
+
 /** End of Health System */
 
 /** Anim Montage, Sound, Particles */
@@ -129,13 +132,16 @@ protected:
 protected:
 
 	FTimerHandle AttackHandle;
+	FTimerHandle RespawnTimerHandle;
+
+	
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "TrialProject | Attacks")
 	bool bIsAttacking;
 
-	TSubclassOf<UDamageType> DamageType;
+	void CastLineTrace();
 
-	float Damage;
+	void CastSphereTrace();
 
 	void SetAttacking(bool IsAttacking);
 
@@ -161,26 +167,28 @@ protected:
 
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	TSubclassOf<UDamageType> DamageType;
+
+	float Damage;
+
 	UFUNCTION(NetMulticast, Reliable, Category = "TrialProject | Health")
 	void PlayerDie();
 
-public:
-
-	UFUNCTION(Server, Reliable)
-	void SphereTrace();
-
-	UFUNCTION(Server, Reliable)
-	void SweepTrace();
+	void RequestRespawn();
 
 /** End of Damage System */
 
 /** Animation */
+
+public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "TrialProject | Animation")
 	UAnimMontage* CurrentActiveMontage;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "TrialProject | Animation")
 	float CurrentActiveMontage_Position; // the current state of the animation playing
+
+private:
 
 	UFUNCTION(Server, Reliable)
 	void UpdateCurrentActiveMontage();
@@ -190,12 +198,11 @@ public:
 	void NMC_PlayAnimMontage(UAnimMontage* InAnimMontage);
 
 	/** play animation dead or hit react */
-	UFUNCTION(NetMulticast, Reliable)
-	void NMC_PlayAnimation(UAnimationAsset* InAnimationAsset);
+	//UFUNCTION(NetMulticast, Reliable)
+	//void NMC_PlayAnimation(UAnimationAsset* InAnimationAsset);
 
 /** End of Animation */
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void SetHealthBarPercent(float InCurrentHealth);
+
 };
 

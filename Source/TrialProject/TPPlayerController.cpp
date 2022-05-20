@@ -36,5 +36,8 @@ void ATPPlayerController::OnKilled()
 
 void ATPPlayerController::Respawn()
 {
-	GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>()->RestartPlayer(this);
+	if (ATPTeamFightGameMode* GM = GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>())
+	{
+		GM->RestartPlayer(this);
+	}
 }
