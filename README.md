@@ -53,12 +53,6 @@ trial project, unreal engine 5, cosu games
 
 ## TODO
 
-  - Add Lobby interface to allow player create and join lobby
-  - Apply Online Beacon to implement Lobby
-  - Reserve a slot in the lobby while waiting game start
-  - Only replicate player state when player press C (show player state, info)
-  - Only replicate player inventory when player press open inventory
-
 ## For Testing
 
   - open editor, play as client
