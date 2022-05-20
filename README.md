@@ -48,8 +48,8 @@ trial project, unreal engine 5, cosu games
 
 ## Current issue
 
-  - Animation Death and Hit React don't play
-  - AddRadialImpulse won't work (using launch character as alternative)
+  - Attack A: "increase swing attempt" has weird behaviour
+  - Health Component
 
 ## TODO
 
