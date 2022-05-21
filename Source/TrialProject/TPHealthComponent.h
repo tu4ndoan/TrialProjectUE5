@@ -7,6 +7,8 @@
 #include "TPHealthComponent.generated.h"
 
 
+DECLARE_MULTICAST_DELEGATE(FOnPlayerHealthChanged);
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class TRIALPROJECT_API UTPHealthComponent : public UActorComponent
 {
@@ -21,14 +23,36 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+
+	/** Property replication */
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+protected:
+	UPROPERTY(ReplicatedUsing = OnRep_MaxHealth, VisibleAnywhere, BlueprintReadOnly, Category = "TrialProject | HealthComponent")
 	float MaxHealth;
 
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentHealth, VisibleAnywhere, BlueprintReadOnly, Category = "TrialProject | HealthComponent")
 	float CurrentHealth;
 
+	FOnPlayerHealthChanged OnPlayerHealthChangedDelegate;
+
+public:
 	UFUNCTION(BlueprintCallable, Category = "TrialProject | HealthComponent")
 	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; };
 
-	FORCEINLINE void SetCurrentHealth(float Value);
+	UFUNCTION(BlueprintCallable, Category = "TrialProject | HealthComponent")
+	FORCEINLINE float GetMaxHealth() const { return MaxHealth; };
 
-	void TakeDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+	FOnPlayerHealthChanged& OnPlayerHealthChanged() { return OnPlayerHealthChangedDelegate; }
+
+	void SetCurrentHealth(float Value);
+
+	UFUNCTION()
+	void OnRep_CurrentHealth();
+
+	UFUNCTION()
+	void OnHealthUpdate();
+
+	UFUNCTION()
+	void OnRep_MaxHealth();
 };

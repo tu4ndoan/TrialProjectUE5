@@ -8,6 +8,20 @@
 #include "TPHealthComponent.h"
 #include "TrialProjectCharacter.generated.h"
 
+
+USTRUCT(BlueprintType)
+struct FCharacterAnimation
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+	UAnimMontage* Montage;
+
+	UPROPERTY(BlueprintReadOnly)
+	float StartTime;
+};
+
 UCLASS(config=Game)
 class ATrialProjectCharacter : public ACharacter
 {
@@ -69,37 +83,6 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-/** Health System */
-
-protected:
-
-	float MaxHealth;
-
-	UPROPERTY(ReplicatedUsing = OnRep_CurrentHealth)
-	float CurrentHealth;
-
-	void SetCurrentHealth(float healthValue);
-
-	UFUNCTION()
-	void OnRep_CurrentHealth();
-
-	void OnHealthUpdate();
-
-public:
-
-	/** Getter for Max Health.*/
-	UFUNCTION(BlueprintPure, Category = "TrialProject | Health")
-	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
-
-	/** Getter for Current Health.*/
-	UFUNCTION(BlueprintPure, Category = "TrialProject | Health")
-	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void SetHealthBarPercent(float InCurrentHealth);
-
-/** End of Health System */
-
 /** Anim Montage, Sound, Particles */
 
 protected:
@@ -134,8 +117,6 @@ protected:
 	FTimerHandle AttackHandle;
 	FTimerHandle RespawnTimerHandle;
 
-	
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "TrialProject | Attacks")
 	bool bIsAttacking;
 
@@ -151,13 +132,13 @@ protected:
 	void StartAttackPrimaryA();
 
 	UFUNCTION(Server, Reliable)
-	void AttackPrimaryA();
+	void AttackPrimaryA(class UAnimMontage* MontageToPlay);
 
 	// Attack B
 	void StartAttackPrimaryB();
 
 	UFUNCTION(Server, Reliable)
-	void AttackPrimaryB();
+	void AttackPrimaryB(class UAnimMontage* MontageToPlay);
 
 /** End of Attack */
 
@@ -171,9 +152,6 @@ protected:
 
 	float Damage;
 
-	UFUNCTION(NetMulticast, Reliable, Category = "TrialProject | Health")
-	void PlayerDie();
-
 	void RequestRespawn();
 
 /** End of Damage System */
@@ -181,6 +159,14 @@ protected:
 /** Animation */
 
 public:
+	UPROPERTY(ReplicatedUsing = OnRep_CharacterAnimation)
+	bool bRepCharacterAnimationStruct;
+
+	UPROPERTY(Replicated)
+	FCharacterAnimation CharacterAnimationStruct;
+
+	UFUNCTION()
+	void OnRep_CharacterAnimation();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "TrialProject | Animation")
 	UAnimMontage* CurrentActiveMontage;
@@ -197,12 +183,21 @@ private:
 	UFUNCTION(NetMulticast, Reliable)
 	void NMC_PlayAnimMontage(UAnimMontage* InAnimMontage);
 
-	/** play animation dead or hit react */
-	//UFUNCTION(NetMulticast, Reliable)
-	//void NMC_PlayAnimation(UAnimationAsset* InAnimationAsset);
-
 /** End of Animation */
 
+public:
+/** Health System */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "TrialProject | Health Component")
+	class UTPHealthComponent* HealthComponent;
+	/** handle player-side logic for health system (like animation, display) */
+	UFUNCTION()
+	void OnHealthUpdate();
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetHealthBarPercent(float InCurrentHealth);
+
+	UFUNCTION(NetMulticast, Reliable, Category = "TrialProject | Animation")
+	void PlayerDie();
+/** End of Health System */
 };
 

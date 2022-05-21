@@ -59,15 +59,16 @@ ATrialProjectCharacter::ATrialProjectCharacter()
 	// Player Attack
 	bIsAttacking = false;
 
-	// Player Health
-	MaxHealth = 100.0f;
-	CurrentHealth = MaxHealth;
+	// Health Component
+	HealthComponent = CreateDefaultSubobject<UTPHealthComponent>(TEXT("HealthComponent"));
 
 	DamageType = UDamageType::StaticClass();
 	Damage = 10.0f;
 
 	if (HasAuthority())
 	{
+		HealthComponent->OnPlayerHealthChanged().AddUFunction(this, FName("OnHealthUpdate"));
+
 		if (ATPTeamFightGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL)
 			GM->OnGameModeCombinedPostLogin().AddUFunction(this, FName("UpdateCurrentActiveMontage"));
 	}
@@ -107,10 +108,11 @@ void ATrialProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ATrialProjectCharacter, CurrentHealth);
 	DOREPLIFETIME(ATrialProjectCharacter, bIsAttacking);
 	DOREPLIFETIME(ATrialProjectCharacter, CurrentActiveMontage);
 	DOREPLIFETIME(ATrialProjectCharacter, CurrentActiveMontage_Position);
+	DOREPLIFETIME(ATrialProjectCharacter, CharacterAnimationStruct);
+	DOREPLIFETIME(ATrialProjectCharacter, bRepCharacterAnimationStruct);
 }
 
 void ATrialProjectCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
@@ -183,18 +185,23 @@ void ATrialProjectCharacter::StartAttackPrimaryA()
 {
 	if (!bIsAttacking && !GetMovementComponent()->IsFalling())
 	{
-		AttackPrimaryA();
+		AttackPrimaryA(M_AttackPrimaryA);
 	}
 }
 
-void ATrialProjectCharacter::AttackPrimaryA_Implementation()
+void ATrialProjectCharacter::AttackPrimaryA_Implementation(class UAnimMontage* MontageToPlay)
 {
 	if (HasAuthority())
 	{
 		SetAttacking(true);
 		LaunchCharacter(RootComponent->GetForwardVector() * 1500.0f, false, false); // dash forward
 		CastLineTrace(); // cast line trace along the dash, see what we hit
-		NMC_PlayAnimMontage(M_AttackPrimaryA);
+		//NMC_PlayAnimMontage(M_AttackPrimaryA);
+
+		CharacterAnimationStruct.Montage = MontageToPlay;
+		CharacterAnimationStruct.StartTime = GetWorld()->GetTimeSeconds();
+		bRepCharacterAnimationStruct = !bRepCharacterAnimationStruct;
+		OnRep_CharacterAnimation();
 	}
 }
 
@@ -203,17 +210,21 @@ void ATrialProjectCharacter::StartAttackPrimaryB()
 {
 	if (!bIsAttacking)
 	{
-		AttackPrimaryB();
+		AttackPrimaryB(M_AttackPrimaryB);
 	}
 }
 
-void ATrialProjectCharacter::AttackPrimaryB_Implementation()
+void ATrialProjectCharacter::AttackPrimaryB_Implementation(class UAnimMontage* MontageToPlay)
 {
 	if (HasAuthority())
 	{
 		SetAttacking(true);
 		CastSphereTrace();
-		NMC_PlayAnimMontage(M_AttackPrimaryB);
+		//NMC_PlayAnimMontage(M_AttackPrimaryB);
+		CharacterAnimationStruct.Montage = MontageToPlay;
+		CharacterAnimationStruct.StartTime = GetWorld()->GetTimeSeconds();
+		bRepCharacterAnimationStruct = !bRepCharacterAnimationStruct;
+		OnRep_CharacterAnimation();
 	}
 }
 
@@ -294,31 +305,23 @@ void ATrialProjectCharacter::CastSphereTrace()
 	}
 }
 
-void ATrialProjectCharacter::SetCurrentHealth(float healthValue)
-{
-	if (HasAuthority())
-	{
-		CurrentHealth = FMath::Clamp(healthValue, 0.f, MaxHealth);
-		OnHealthUpdate();
-	}
-}
-
-void ATrialProjectCharacter::OnRep_CurrentHealth()
-{
-	OnHealthUpdate();
-}
 
 void ATrialProjectCharacter::OnHealthUpdate()
 {
+	if (HealthComponent == NULL)
+	{
+		return;
+	}
+
 	if (HasAuthority())
 	{
-		if (CurrentHealth <= 0)
+		if (HealthComponent->GetCurrentHealth() <= 0)
 		{
 			GetPlayerState<ATPPlayerState>()->SetIsDead(true);
 			PlayerDie();
 		}
 	}
-	SetHealthBarPercent(CurrentHealth);
+	SetHealthBarPercent(HealthComponent->GetCurrentHealth());
 }
 
 float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -340,12 +343,16 @@ float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent 
 		return 0.f;
 	}
 
-	float damageApplied = CurrentHealth - ActualDamage;
+	if (HealthComponent == NULL)
+	{
+		return 0.f;
+	}
 
-	SetCurrentHealth(damageApplied);
+	float DamageApplied = HealthComponent->GetCurrentHealth() - ActualDamage;
 
 	if (HasAuthority())
 	{
+		HealthComponent->SetCurrentHealth(DamageApplied);
 		ATPTeamFightGameMode* GM = GetWorld() != NULL ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL;
 		if (GM)
 		{
@@ -355,7 +362,7 @@ float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent 
 				PS->SetTotalSwingAttempt(PS->GetTotalSwingAttempt() + 1);
 		}
 	}
-	return damageApplied;
+	return DamageApplied;
 }
 
 void ATrialProjectCharacter::PlayerDie_Implementation()
@@ -389,5 +396,16 @@ void ATrialProjectCharacter::UpdateCurrentActiveMontage_Implementation()
 			CurrentActiveMontage = CurrentMontage;
 			CurrentActiveMontage_Position = AI->Montage_GetPosition(CurrentActiveMontage);
 		}
+	}
+}
+
+void ATrialProjectCharacter::OnRep_CharacterAnimation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("logged"));
+
+	if (UAnimInstance* AI = GetMesh()->GetAnimInstance())
+	{
+		float AnimDuration = AI->Montage_Play(CharacterAnimationStruct.Montage, 1.0f, EMontagePlayReturnType::MontageLength, 0.3f, true);
+		GetWorld()->GetTimerManager().SetTimer(AttackHandle, this, &ATrialProjectCharacter::StopAttacking, AnimDuration, false);
 	}
 }
