@@ -22,6 +22,28 @@ public:
 	float StartTime;
 };
 
+USTRUCT(BlueprintType)
+struct FCharacterSkill
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+	FString SkillID;
+
+	UPROPERTY(BlueprintReadOnly)
+	UAnimMontage* Montage;
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector Start;
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector End;
+
+	UPROPERTY(BlueprintReadOnly)
+	float Radius;
+};
+
 UCLASS(config=Game)
 class ATrialProjectCharacter : public ACharacter
 {
@@ -85,7 +107,7 @@ public:
 
 /** Anim Montage, Sound, Particles */
 
-protected:
+public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TrialProject | Effects")
 	UAnimMontage* M_AttackPrimaryA;

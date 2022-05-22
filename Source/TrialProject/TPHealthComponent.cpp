@@ -31,22 +31,45 @@ void UTPHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 void UTPHealthComponent::SetCurrentHealth(float Value)
 {
 	if (GetOwnerRole() == ROLE_Authority)
+	{
 		CurrentHealth = FMath::Clamp(Value, 0.f, MaxHealth);
+		//OnPlayerHealthChangedDelegate.Broadcast();
+		OnRep_CurrentHealth();
+
+		
+	}
+
 }
 
 void UTPHealthComponent::OnRep_CurrentHealth()
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("HealthComponent: player %s is currently having %f HP"), *GetOwner()->GetName(), CurrentHealth));
-	UE_LOG(LogTemp, Warning, TEXT("HealthComponent: player %s is currently having %f HP"), *GetOwner()->GetName(), CurrentHealth);
+	OnHealthUpdate();
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("HealthComponent: player %s is currently having %f HP"), *GetOwner()->GetName(), CurrentHealth));
+	//UE_LOG(LogTemp, Warning, TEXT("HealthComponent: player %s is currently having %f HP"), *GetOwner()->GetName(), CurrentHealth);
 }
 
 void UTPHealthComponent::OnHealthUpdate()
 {
+
+	if (GetOwnerRole() == ROLE_AutonomousProxy)
+	{
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("HealthComponent: player %s 's Role is AutonomousProxy"), *GetOwner()->GetName()));
+	}
+
+	if (GetOwnerRole() == ROLE_SimulatedProxy)
+	{
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("HealthComponent: player %s 's max HP is SimulatedProxy"), *GetOwner()->GetName()));
+	}
+
 	if (GetOwnerRole() == ROLE_Authority)
 	{
-		OnPlayerHealthChangedDelegate.Broadcast();
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("HealthComponent: player %s 's Role is Authority"), *GetOwner()->GetName()));
 	}
+	GetOwner<ATrialProjectCharacter>()->SetHealthBarPercent(CurrentHealth);
 }
 
 void UTPHealthComponent::OnRep_MaxHealth()

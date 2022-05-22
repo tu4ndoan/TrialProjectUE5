@@ -31,6 +31,7 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_MaxHealth, VisibleAnywhere, BlueprintReadOnly, Category = "TrialProject | HealthComponent")
 	float MaxHealth;
 
+public:
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentHealth, VisibleAnywhere, BlueprintReadOnly, Category = "TrialProject | HealthComponent")
 	float CurrentHealth;
 

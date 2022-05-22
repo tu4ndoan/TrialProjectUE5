@@ -308,25 +308,39 @@ void ATrialProjectCharacter::CastSphereTrace()
 
 void ATrialProjectCharacter::OnHealthUpdate()
 {
+	UE_LOG(LogTemp, Warning, TEXT("CALLED"));
 	if (HealthComponent == NULL)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("HEALTH COMPONENT NULL"));
 		return;
 	}
+	UE_LOG(LogTemp, Warning, TEXT("HEALTH COMPONENT"));
 
 	if (HasAuthority())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("1"));
 		if (HealthComponent->GetCurrentHealth() <= 0)
 		{
 			GetPlayerState<ATPPlayerState>()->SetIsDead(true);
 			PlayerDie();
+			UE_LOG(LogTemp, Warning, TEXT("2"));
 		}
+		
 	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("%f"), HealthComponent->GetCurrentHealth());
+	UE_LOG(LogTemp, Warning, TEXT("%f"), HealthComponent->CurrentHealth);
 	SetHealthBarPercent(HealthComponent->GetCurrentHealth());
 }
 
 float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	if (!ShouldTakeDamage(DamageTaken, DamageEvent, EventInstigator, DamageCauser))
+	{
+		return 0.f;
+	}
+
+	if (GetPlayerState<ATPPlayerState>()->IsTeamB() == EventInstigator->GetPlayerState<ATPPlayerState>()->IsTeamB())
 	{
 		return 0.f;
 	}
@@ -338,21 +352,19 @@ float ATrialProjectCharacter::TakeDamage(float DamageTaken, struct FDamageEvent 
 		return 0.f;
 	}
 
-	if (GetPlayerState<ATPPlayerState>()->IsTeamB() == EventInstigator->GetPlayerState<ATPPlayerState>()->IsTeamB())
-	{
-		return 0.f;
-	}
-
-	if (HealthComponent == NULL)
-	{
-		return 0.f;
-	}
-
 	float DamageApplied = HealthComponent->GetCurrentHealth() - ActualDamage;
+
+	UE_LOG(LogTemp, Warning, TEXT("%f"), HealthComponent->GetCurrentHealth());
+	UE_LOG(LogTemp, Warning, TEXT("%f"), ActualDamage);
+	UE_LOG(LogTemp, Warning, TEXT("%f"), DamageApplied);
+
+	
 
 	if (HasAuthority())
 	{
-		HealthComponent->SetCurrentHealth(DamageApplied);
+		if (HealthComponent)
+			HealthComponent->SetCurrentHealth(DamageApplied);
+
 		ATPTeamFightGameMode* GM = GetWorld() != NULL ? GetWorld()->GetAuthGameMode<ATPTeamFightGameMode>() : NULL;
 		if (GM)
 		{
@@ -389,6 +401,8 @@ void ATrialProjectCharacter::NMC_PlayAnimMontage_Implementation(UAnimMontage* In
 
 void ATrialProjectCharacter::UpdateCurrentActiveMontage_Implementation()
 {
+	/* tell the new join player about some informations
+	
 	if (UAnimInstance* AI = GetMesh()->GetAnimInstance())
 	{
 		if (UAnimMontage* CurrentMontage = AI->GetCurrentActiveMontage())
@@ -397,12 +411,13 @@ void ATrialProjectCharacter::UpdateCurrentActiveMontage_Implementation()
 			CurrentActiveMontage_Position = AI->Montage_GetPosition(CurrentActiveMontage);
 		}
 	}
+	
+	*/
+	
 }
 
 void ATrialProjectCharacter::OnRep_CharacterAnimation()
 {
-	UE_LOG(LogTemp, Warning, TEXT("logged"));
-
 	if (UAnimInstance* AI = GetMesh()->GetAnimInstance())
 	{
 		float AnimDuration = AI->Montage_Play(CharacterAnimationStruct.Montage, 1.0f, EMontagePlayReturnType::MontageLength, 0.3f, true);
